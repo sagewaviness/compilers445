@@ -54,6 +54,5 @@ tartests:
 
 tarall: 
 	make tartests
-	tar -cvf $(BIN)-all.tar $(SRCS) $(HDRS) $(TSTS) setOfTests.tar makefile	
+	tar -cvf $(BIN)-all.tar $(SRCS) $(HDRS) $(TSTS) setOfTests.tar makefile
 	ls -l $(BIN)-all.tar
-
