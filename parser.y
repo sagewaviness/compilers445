@@ -1,8 +1,11 @@
 %{
-#include <cstdio>
+#include <stdio.h>
 #include <iostream>
+#include <stdlib.h>
 #include <unistd.h>
+#include "treeUtils.h"
 #include "scanType.h"
+#include "dot.h"
 using namespace std;
 
 extern "C" int yylex();
@@ -94,22 +97,43 @@ void yyerror (const char *msg)
    cout << "Error: " <<  msg << endl;
 }
 int main(int argc, char **argv) {
-   yylval.tinfo.linenum = 1;
-   int option, index;
+   //yylval.tinfo.linenum = 1;
+   int index;
    char *file = NULL;
+   bool dotAST = false;             // make dot file of AST
    extern FILE *yyin;
-   while ((option = getopt (argc, argv, "")) != -1)
-      switch (option)
-      {
-      default:
-         ;
+
+   int ch;
+
+   while ((ch = getopt(argc, argv, "d")) != -1) {
+      switch (ch) {
+         case 'd':
+                 dotAST = true;
+                 break;
+         case '?':
+         default:
+                 //usage();
+               ;
       }
+   }
+
    if ( optind == argc ) yyparse();
-   for (index = optind; index < argc; index++) 
+   for (index = optind; index < argc; index++)
    {
       yyin = fopen (argv[index], "r");
       yyparse();
       fclose (yyin);
+   }
+   if (numErrors==0) {
+      printTree(stdout, syntaxTree, true, true);
+      if(dotAST) {
+         printDotTree(stdout, syntaxTree, false, false);
+      }
+   }
+   else {
+      printf("-----------\n");
+      printf("Errors: %d\n", numErrors);
+      printf("-----------\n");
    }
    return 0;
 }
