@@ -13,14 +13,20 @@ using namespace std;
 
 int line = 1;
 
+char *lastToken = (char*)"";
+
 int setValue(int linenum, int tokenClass, char *svalue)
 {
-   yylval.tinfo.tokenclass = tokenClass;
-   yylval.tinfo.linenum = linenum;
-   yylval.tinfo.tokenstr = strdup(svalue);
-   yylval.tinfo.cvalue = '@';
-   yylval.tinfo.nvalue = 777;
-   yylval.tinfo.svalue = NULL;
+   yylval.tokenData = new tokenData
+   yylval.tokenData->tokenclass = tokenClass;
+   yylval.tokenData->linenum = linenum;
+   yylval.tokenData->tokenstr = strdup(svalue) = lastToken;
+   yylval.tokenData->cvalue = svalue[0];
+   
+   // may cause overflow
+   yylval.tokenData->nvalue = atoi(svalue);
+   yylval.tokenData->svalue = strdup(svalue);
+
    return tokenClass;
 }
 
@@ -84,13 +90,14 @@ comment         "//".*
 "bool"          {return setValue(line, BOOL, yytext);}
 ":<:"           {return setValue(line, MIN, yytext);}
 ":>:"           {return setValue(line, MAX, yytext);}
+
 {numbers}       {return setValue(line, NUMCONST, yytext);}
 {id}    	{return setValue(line, ID, yytext);}
 {strings}       {return setValue(line, STRINGCONST, yytext);}
 {chars}		{return setValue(line, CHARCONST, yytext);}
 {op}|{op2}      {return setValue(line, OP, yytext);}
-{comment}       ;
+{comment}       {return setValue(line, COMMENT, yytext);}
 \n              {line++ ;}
 {whitespace}+  ;
-.               {yylval.tinfo.tokenstr = yytext; return ERROR;}
+.               {printf("ERROR(%d): Token error, invalid or misplaced input character: \'%c\'. Character Ignored.\n", line, yytext[0]);}
 
