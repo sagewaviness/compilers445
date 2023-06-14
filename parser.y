@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "treeUtils.h"
 #include "scanType.h"
+#include "treeNodes.h"
 #include "dot.h"
 using namespace std;
 
@@ -296,10 +297,26 @@ argList : argList ',' exp     {}
         | exp                 {}
         ;
 
-constant : NUMCONST     {}
-         | CHARCONST {}
-         | STRINGCONST  {}
-         | BOOLCONST    {}
+constant : NUMCONST     { $$ = newExpNode(ConstantK, $1); 
+                           $$-attr.value = $1 ->nvalue;
+                           $$->type = Integer; 
+                           $$->isArray = false;
+                           $$->size = 1;}
+         | CHARCONST    {$$ = newExpNode(ConstantK, $1); 
+                           $$-attr.value = $1 ->cvalue;
+                           $$->type = Char; 
+                           $$->isArray = false;
+                           $$->size = 1;}
+         | STRINGCONST  {$$ = newExpNode(ConstantK, $1); 
+                           $$-attr.value = $1 ->svalue;
+                           $$->type = Char; 
+                           $$->isArray = true;
+                           $$->size = $1->nvalue+1;/* this is probably wrong*/} 
+         | BOOLCONST    {$$ = newExpNode(ConstantK, $1); 
+                           $$-attr.value = $1 ->svalue;
+                           $$->type = Boolean; 
+                           $$->isArray = true;
+                           $$->size = 1;}
          ;
 
 %%
