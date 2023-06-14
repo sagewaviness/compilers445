@@ -14,15 +14,50 @@ extern "C" FILE *yyin;
 
 void yyerror(const char *msg);
 
-void printToken(TokenData myData, string tokenName, int type = 0) {
+void printToken(TokenData myData, string tokenName, int type = 0) 
+{
 	cout << "Line: " << myData.linenum << " Type: " << tokenName;
 	if(type==0)
-		cout << " Token: " << myData.tokenstr;
+   {
+      cout << " Token: " << myData.tokenstr;
+   }
 	if(type==1)
-		cout << " Token: " << myData.nvalue;
+   {
+      cout << " Token: " << myData.nvalue;
+   }
 	if(type==2)
-		cout << " Token: " << myData.cvalue;
+   {
+      cout << " Token: " << myData.cvalue;
+   }
+		
 	cout << endl;
+}
+
+TreeNode *addSibling(TreeNode *t, TreeNode *s)
+{
+   if(s == NULL && numErrors == 0)
+   {
+      printf("ERROR(SYSTEM) : never add a null to sibling list);
+      exit(1);
+   }
+   if(t!= NULL)
+   {
+      TreeNode *tmp;
+
+      tmp = t; 
+      while(tmp->sibling!=NULL) tmp = tmp->sibling;
+      tmp->sibling = s;
+   }
+}
+
+void setType(TreeNode *t, ExpType type, bool isStatic)
+{
+   while(t)
+   {
+      t->type = type;
+      t->isStatic = isStatic;
+      t = t->sibling;
+   }
 }
 
 TreeNode *syntaxTree;
@@ -73,46 +108,46 @@ declList : declList decl                {}
          | decl                         {}
          ;
 
-decl : varDecl{}
-     | funDecl{}
+decl : varDecl                          {}
+     | funDecl                          {}
      ;
 
 varDecl :typeSpec varDeclList';'       {$$ = setType($2, $1, false); yyerrok;}
          ;
 
-scopedVarDecl : STATIC typeSpec varDeclList ';'  {}
-              | typeSpec varDeclList ';' {}
+scopedVarDecl : STATIC typeSpec varDeclList ';'  {$$ = $3; setType($3,$2,true); yyerrok;}
+              | typeSpec varDeclList ';' {$$ = $2; setType($3,$1,false); yyerrok;}
               ;
-varDeclList : varDeclList ',' varDeclInit{}
-            | varDeclInit {}
+varDeclList : varDeclList ',' varDeclInit{$$ = addSibling($1, $3); yyerrok;}
+            | varDeclInit {$$ = $1;}
             ;
 
-varDeclInit : varDeclId {}
+varDeclInit : varDeclId {$$ = $1;}
             ;
 
-varDeclId : ID{}
+varDeclId : ID{$$ = newDeclNode(VarK, UndefinedType, $1);}
           | ID '[' NUMCONST ']' {}
           ;
-typeSpec : INT {}
-         | BOOL {}
-         | CHAR  {}
+typeSpec : INT {$$ = Integer;}
+         | BOOL {$$ = Boolean;}
+         | CHAR  {$$ = Char;}
          ;
 funDecl : typeSpec ID '(' parms ')' stmt       {$$ = newDeclNode(Funck, $1, $2, $4, $6)}
         | ID '(' parms ')' stmt                {$$ = newDeclNode(Funck, Void, $1, $3, $5)}
         ;
 
-parms : parmList   {}
+parms : parmList   {$$ = $1;}
       | /* empty */           {$$ = NULL}
       ;
 
-parmList : parmList ';' parmTypeList {}
-         | parmTypeList  {}
+parmList : parmList ';' parmTypeList {$$ = addSibling($1,$3);}
+         | parmTypeList  {$$ = $1;}
          ;
 
-parmTypeList : typeSpec parmIdList {}
+parmTypeList : typeSpec parmIdList {$$ = $2; setType($2, $1, false);}
              ;
 
-parmIdList : parmIdList ',' parmId{}
+parmIdList : parmIdList ',' parmId { $$ = addSibling($1, $3);}
            | parmId {}
            ;
 
@@ -120,8 +155,8 @@ parmId : ID  {}
        | ID '[' ']'  {}
        ;
 
-stmt : matched  {}
-     | unmatched {}
+stmt : matched  {$$ = $1;}
+     | unmatched {$$ = $1;}
      ;
 
 matched  : IF simpleExp THEN matched ELSE matched{}
@@ -267,55 +302,6 @@ constant : NUMCONST     {}
          | BOOLCONST    {}
          ;
 
-/*
-program :  program term
-   |  term  {$$=$1;}
-   ;
-term  :
-      PRECOMPILER {printToken(yylval.tinfo, "PRECOMPILER");}
-   |  BOOL {printToken(yylval.tinfo, "BOOL");}
-   |  AND {printToken(yylval.tinfo, "AND");}
-   |  TO {printToken(yylval.tinfo, "TO");}
-   |  IF  {printToken(yylval.tinfo, "IF");}
-   |  FOR {printToken(yylval.tinfo, "FOR");} 
-   |  THEN {printToken(yylval.tinfo, "THEN");}
-   |  ELSE {printToken(yylval.tinfo, "ELSE");}
-   |  END  {printToken(yylval.tinfo, "END");}
-   |  REPEAT {printToken(yylval.tinfo, "REPEAT");}
-   |  BY {printToken(yylval.tinfo, "BY");}
-   |  INFINITYLOOP {printToken(yylval.tinfo, "INFINITYLOOP");}
-   |  BREAK {printToken(yylval.tinfo, "BREAK");}
-   |  NUMCONST {printToken(yylval.tinfo, "NUMCONST");} 
-   |  STRINGCONST {printToken(yylval.tinfo, "STRINGCONST");}
-   |  RETURN {printToken(yylval.tinfo, "RETURN");}
-   |  WHILE {printToken(yylval.tinfo, "WHILE");}
-   |  NOT {printToken(yylval.tinfo, "NOT");}
-   |  BOOLCONST {printToken(yylval.tinfo, "BOOLCONST");}
-   |  ELSIF {printToken(yylval.tinfo, "ELSIF");}
-   |  STATIC {printToken(yylval.tinfo, "STATIC");} 
-   |  INT {printToken(yylval.tinfo, "INT");}
-   |  CHARCONST {printToken(yylval.tinfo, "CHARCONST");}
-   |  OR  {printToken(yylval.tinfo, "OR");}
-   |  OP  {printToken(yylval.tinfo, "OP");}
-   |  ID  {printToken(yylval.tinfo, "ID");}
-   |  DO  {printToken(yylval.tinfo, "DO");}
-   |  PLUSEQ {printToken(yylval.tinfo, "PLUSEQ");} 
-   |  MULASS {printToken(yylval.tinfo, "MULASS");}
-   |  TIMEEQ {printToken(yylval.tinfo, "TIMEEQ");}
-   |  DIVASS {printToken(yylval.tinfo, "DIVASS");}
-   |  LEQ   {printToken(yylval.tinfo, "LEQ");}
-   |  GEQ   {printToken(yylval.tinfo, "GEQ");}
-   |  EQ    {printToken(yylval.tinfo, "EQ");}
-   |  SUBASS {printToken(yylval.tinfo, "SUBASS");}
-   |  ADDASS  {printToken(yylval.tinfo, "ADDASS");}
-   |  INC   {printToken(yylval.tinfo, "INC");}
-   |  DEC   {printToken(yylval.tinfo, "DEC");}
-   |  NEQ   {printToken(yylval.tinfo, "NEQ");}
-   |  MIN   {printToken(yylval.tinfo, "MIN");}
-   |  MAX   {printToken(yylval.tinfo, "MAX");}
-   |  CHAR  {printToken(yylval.tinfo, "CHAR");}
-   |  ERROR    {cout << "ERROR(SCANNER Line " << yylval.tinfo.linenum << "): Invalid input character " << yylval.tinfo.tokenstr << endl; }
-   ;*/
 %%
 void yyerror (const char *msg)
 { 

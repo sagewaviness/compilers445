@@ -18,12 +18,66 @@ TreeNode *newStmtNode(StmtKind kind, TokenData *token, TreeNode *c0, TreeNode *c
     int i; 
     
     newNode = new TreeNode;
-    // newNode->nodeNum = nodeNum++;
-    // more code 
+    newNode->nodeNum = nodeNum++;
+
+    if(newNode == NULL)
+    {
+        yyerror("ERROR: Out of memory");
+    }
+    else
+    {
+        newNode->child[0] = c0; 
+        newNode->child[1] = c1; 
+        newNode->child[2] = c2;
+
+        newNode->sibling = NULL;
+        newNode->lineno = (token ? token->linenum: -1);
+        newNode->attr.name =(token ? token->svalue : strdup("BLAH"));
+        newNode->type = type; 
+
+        newNode->size = 1; 
+        newNode->varKind = Local;
+        newNode->offset = 0;
+        newNode->isArray = false; 
+        newNode->isStatic = false;
+        newNode->isConst = false; 
+
+        newNode->nodekind = DeclK; 
+        newNode->kind.decl = kind; 
+    }
 
     return newNode;
 }
 
+char *expTypeToStr(ExpType type, bool isArray, bool isStatic)
+{
+    char *typeName;
+
+    switch(type)
+    {
+        case Void: 
+                typeName = (char *)"type void";
+                break;
+        case Integer: 
+                typeName = (char *)"type int";
+                break;
+        case Boolean: 
+                typeName = (char *)"type bool";
+                break;
+        case Char: 
+                typeName = (char *)"type char";
+                break;
+        case UndefinedType: 
+                typeName = (char *)"type undefined type";
+                break;
+        default: 
+                char *buffer;
+                buffer = new char[80]; 
+                sprintf(buffer, "invalid expType: %d", (int)type);
+    }
+
+    sprintf(expTypeToStrBuffer, "%s%s%s", isStatic ? "static" : "", isArray ? "array of " : "");
+}
 //  newExpNode • exp
 //     • simpleExp
 //     • andExp
