@@ -27,4 +27,6 @@ char *tokenToStr(int type);
 // create this function
 void printTree(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showAllocation);
 
+char *expTypeToStr(ExpType type, bool isArray=false, bool isStatic=false);
+
 #endif
