@@ -1,10 +1,10 @@
 %{
+#include <stdlib.h>
+#include <string.h>
+#include <iostream>
+#include "treeNodes.h"
 #include "scanType.h"
 #include "parser.tab.h"
-
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 using namespace std;
 
 
@@ -17,10 +17,10 @@ char *lastToken = (char*)"";
 
 int setValue(int linenum, int tokenClass, char *svalue)
 {
-   yylval.tokenData = new tokenData
+   yylval.tokenData = new TokenData;
    yylval.tokenData->tokenclass = tokenClass;
    yylval.tokenData->linenum = linenum;
-   yylval.tokenData->tokenstr = strdup(svalue) = lastToken;
+   yylval.tokenData->tokenstr = lastToken = strdup(svalue);
    yylval.tokenData->cvalue = svalue[0];
    
    // may cause overflow
