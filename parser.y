@@ -109,106 +109,106 @@ precomList : precomList PRECOMPILER    {$$ = $1;}
             | /* empty */              {$$ = NULL;}
             ;
 
-declList : declList decl                {}
-         | decl                         {}
+declList : declList decl         {}
+         | decl                  {}
          ;
 
-decl : varDecl                          {}
-     | funDecl                          {}
+decl : varDecl                   {}
+     | funDecl                   {}
      ;
 
-varDecl :typeSpec varDeclList ';'       {$$ = $2; setType($2, $1, false); yyerrok;}
+varDecl :typeSpec varDeclList ';'               {$$ = $2; setType($2, $1, false); yyerrok;}
          ;
 
-scopedVarDecl : STATIC typeSpec varDeclList ';'  {$$ = $3; setType($3,$2,true); yyerrok;}
-              | typeSpec varDeclList ';' {$$ = $2; setType($2, $1, false); yyerrok;}
+scopedVarDecl : STATIC typeSpec varDeclList ';' {$$ = $3; setType($3,$2,true); yyerrok;}
+              | typeSpec varDeclList ';'        {$$ = $2; setType($2, $1, false); yyerrok;}
               ;
-varDeclList : varDeclList ',' varDeclInit{$$ = addSibling($1, $3); yyerrok;}
-            | varDeclInit {$$ = $1;}
+varDeclList : varDeclList ',' varDeclInit       {$$ = addSibling($1, $3); yyerrok;}
+            | varDeclInit                       {$$ = $1;}
             ;
 
-varDeclInit : varDeclId {$$ = $1;}
+varDeclInit : varDeclId            {$$ = $1;}
             ;
 
-varDeclId : ID{$$ = newDeclNode(VarK, UndefinedType, $1);}
-          | ID '[' NUMCONST ']' {}
+varDeclId : ID                                  {$$ = newDeclNode(VarK, UndefinedType, $1);}
+          | ID '[' NUMCONST ']'                 {}
           ;
-typeSpec : INT {$$ = Integer;}
-         | BOOL {$$ = Boolean;}
-         | CHAR  {$$ = Char;}
+typeSpec : INT                   {$$ = Integer;}
+         | BOOL                  {$$ = Boolean;}
+         | CHAR                  {$$ = Char;}
          ;
 funDecl : typeSpec ID '(' parms ')' stmt       {$$ = newDeclNode(FuncK, $1, $2, $4, $6);}
         | ID '(' parms ')' stmt                {$$ = newDeclNode(FuncK, Void, $1, $3, $5);}
         ;
 
-parms : parmList   {$$ = $1;}
-      | /* empty */           {$$ = NULL;}
+parms : parmList                               {$$ = $1;}
+      | /* empty */                            {$$ = NULL;}
       ;
 
-parmList : parmList ';' parmTypeList {$$ = addSibling($1,$3);}
-         | parmTypeList  {$$ = $1;}
+parmList : parmList ';' parmTypeList           {$$ = addSibling($1,$3);}
+         | parmTypeList                        {$$ = $1;}
          ;
 
-parmTypeList : typeSpec parmIdList {$$ = $2; setType($2, $1, false);}
+parmTypeList : typeSpec parmIdList             {$$ = $2; setType($2, $1, false);}
              ;
 
-parmIdList : parmIdList ',' parmId { $$ = addSibling($1, $3);}
-           | parmId {}
+parmIdList : parmIdList ',' parmId             {$$ = addSibling($1, $3);}
+           | parmId                            {$$ = $1}
            ;
 
-parmId : ID  {}
-       | ID '[' ']'  {}
+parmId : ID                                    {}
+       | ID '[' ']'                            {}
        ;
 
-stmt : matched  {$$ = $1;}
-     | unmatched {$$ = $1;}
+stmt : matched                                 {$$ = $1;}
+     | unmatched                               {$$ = $1;}
      ;
 
-matched  : IF simpleExp THEN matched ELSE matched{}
-         | WHILE simpleExp DO matched{}
-         | FOR ID '=' iterRange DO matched {}
-         | expstmt{}
-         | compoundstmt{}
-         | returnstmt {}
-         | breakstmt {}
+matched  : IF simpleExp THEN matched ELSE matched  {}
+         | WHILE simpleExp DO matched              {}
+         | FOR ID '=' iterRange DO matched         {}
+         | expstmt                                 {}
+         | compoundstmt                            {}
+         | returnstmt                              {}
+         | breakstmt                               {}
          ;
 
-iterRange : simpleExp TO simpleExp  {}
-          | simpleExp TO simpleExp BY simpleExp{}
+iterRange : simpleExp TO simpleExp                 {}
+          | simpleExp TO simpleExp BY simpleExp    {}
           ;
 
-unmatched : IF simpleExp THEN stmt{}
-   | IF simpleExp THEN matched ELSE unmatched {}
-   | WHILE simpleExp DO unmatched{}
-   | FOR ID '=' iterRange DO unmatched{}
+unmatched : IF simpleExp THEN stmt                {}
+   | IF simpleExp THEN matched ELSE unmatched     {}
+   | WHILE simpleExp DO unmatched                 {}
+   | FOR ID '=' iterRange DO unmatched            {}
    ;
 
-expstmt : exp ';'{$$ = $1;}
+expstmt : exp ';'                           {$$ = $1;}
          ;
 
-compoundstmt : '{' localDecls stmtList '}' {$$ = newStmtNode(CompoundK, $1, $2, $3);}
+compoundstmt : '{' localDecls stmtList '}'  {$$ = newStmtNode(CompoundK, $1, $2, $3);}
              ;
 
-localDecls : localDecls scopedVarDecl     {$$ = addSibling($1,$2);}
-           | /* empty */                  {$$ = NULL;}
+localDecls : localDecls scopedVarDecl       {$$ = addSibling($1,$2);}
+           | /* empty */                    {$$ = NULL;}
            ;
 
-stmtList : stmtList stmt  {$$ = ($2 ==NULL? $1: addSibling($1, $2));}
-            | /* empty */                 {$$ = NULL;}
+stmtList : stmtList stmt                    {$$ = ($2 ==NULL? $1: addSibling($1, $2));}
+            | /* empty */                   {$$ = NULL;}
             ;
 
-returnstmt : RETURN ';' {$$ = newStmtNode(ReturnK, $1);}
-           | RETURN exp ';'   {$$ = newStmtNode(ReturnK, $1, $2);}
+returnstmt : RETURN ';'                     {$$ = newStmtNode(ReturnK, $1);}
+           | RETURN exp ';'                 {$$ = newStmtNode(ReturnK, $1, $2);}
            ;
 
-breakstmt : BREAK ';'      {$$ = newStmtNode(BreakK, $1);}
+breakstmt : BREAK ';'                       {$$ = newStmtNode(BreakK, $1);}
           ;
 
-exp : mutablel assignop exp   {$$ = newExpNode(AssignK, $2, $1, $3);}
-      | mutablel INC    {$$ = newExpNode(AssignK, $2, $1);}
-      | mutablel DEC    {$$ = newExpNode(AssignK, $2, $1);}
-      | simpleExp       {$$ = $1;}
-      | mutablel assignop error  {$$ = NULL;}
+exp : mutablel assignop exp               {$$ = newExpNode(AssignK, $2, $1, $3);}
+      | mutablel INC                      {$$ = newExpNode(AssignK, $2, $1);}
+      | mutablel DEC                      {$$ = newExpNode(AssignK, $2, $1);}
+      | simpleExp                         {$$ = $1;}
+      | mutablel assignop error           {$$ = NULL;}
       ;
 
 assignop : '='    {$$ = $1;}
@@ -218,54 +218,54 @@ assignop : '='    {$$ = $1;}
       | DIVASS    {$$ = $1;}
       ;
 
-simpleExp : simpleExp OR andExp {$$ = newExpNode(OpK, $2, $1,$3);}
-          | andExp         {$$ = $1;}
+simpleExp : simpleExp OR andExp     {$$ = newExpNode(OpK, $2, $1,$3);}
+          | andExp                  {$$ = $1;}
           ;
 
-andExp : andExp AND unaryRelExp  {$$ = newExpNode(OpK, $2,$1,$3);}
-       | unaryRelExp       {$$ = $1;}
+andExp : andExp AND unaryRelExp     {$$ = newExpNode(OpK, $2,$1,$3);}
+       | unaryRelExp                {$$ = $1;}
        ;
 
-unaryRelExp : NOT unaryRelExp {$$ = newExpNode(OpK, $1, $2);}
-            | relExp    {$$ = $1;}
+unaryRelExp : NOT unaryRelExp       {$$ = newExpNode(OpK, $1, $2);}
+            | relExp                {$$ = $1;}
             ;
 
 relExp : minmaxExp relop minmaxExp  {$$ = newExpNode(OpK, $2,$1,$3);}
-       | minmaxExp      {$$ = $1;}
+       | minmaxExp                  {$$ = $1;}
        ;
 
-relop : LEQ {$$ = $1;}
-      | '<' {$$ = $1;}
-      | '>' {$$ = $1;}
-      | GEQ {$$ = $1;}
-      | EQ  {$$ = $1;}
-      | NEQ {$$ = $1;}
+relop : LEQ       {$$ = $1;}
+      | '<'       {$$ = $1;}
+      | '>'       {$$ = $1;}
+      | GEQ       {$$ = $1;}
+      | EQ        {$$ = $1;}
+      | NEQ       {$$ = $1;}
       ;
 
 minmaxExp : minmaxExp minmaxop sumExp     {$$ = newExpNode(OpK, $2,$1,$3);}
-          | sumExp      {$$ = $1;}
+          | sumExp                        {$$ = $1;}
           ;
 
 
-minmaxop : MAX {$$ = $1;}
-         | MIN {$$ = $1;}
+minmaxop : MAX       {$$ = $1;}
+         | MIN       {$$ = $1;}
          ;
 
-sumExp : sumExp sumop mulExp  {$$ = newExpNode(OpK, $2,$1,$3);}
-      | mulExp {$$ = $1;}
+sumExp : sumExp sumop mulExp     {$$ = newExpNode(OpK, $2,$1,$3);}
+      | mulExp                   {$$ = $1;}
       ;
 
-sumop : '+' {$$ = $1;}
-      | '-' {$$ = $1;}
+sumop : '+'       {$$ = $1;}
+      | '-'       {$$ = $1;}
       ;
 
 mulExp : mulExp mulop unaryExp   {$$ = newExpNode(OpK, $2,$1,$3);}
-       | unaryExp {$$ = $1;}
+       | unaryExp                {$$ = $1;}
        ;
 
-mulop : '*' {$$ = $1;}
-      | '/' {$$ = $1;}
-      | '%' {$$ = $1;}
+mulop : '*'       {$$ = $1;}
+      | '/'       {$$ = $1;}
+      | '%'       {$$ = $1;}
       ;
 
 unaryExp : unaryop unaryExp   {$$ = newExpNode(OpK, $1,$2);}
@@ -282,21 +282,20 @@ factor : immutablel  {$$ = $1;}
       ;
 
 mutablel : ID              {$$ = newExpNode(IdK, $1); 
-			    $$->attr.name = $1->svalue; 
-			    $$->isArray = false; }
+			                     $$->attr.name = $1->svalue; 
+			                     $$->isArray = false; }
          | ID '[' exp ']'  {$$ = newExpNode(OpK, $2, NULL, $3);
-			    $$->child[0] = newExpNode(IdK,$1);
-			    $$->child[0]->attr.name = $1->svalue; 
-			    $$->isArray = false; 
-				}
+			                     $$->child[0] = newExpNode(IdK,$1);
+                              $$->child[0]->attr.name = $1->svalue; 
+                              $$->isArray = false; }
          ;
 
 immutablel : '(' exp ')'   {$$ = $2;}
             | call         {$$ = $1;}
-            | constant  {$$ = $1;}
+            | constant     {$$ = $1;}
             ;
 
-call : ID '(' args ')'  {$$ = newExpNode(CallK, $1); $$->attr.name = $1->svalue;}
+call : ID '(' args ')'     {$$ = newExpNode(CallK, $1); $$->attr.name = $1->svalue;}
      ;
 
 args : argList                      {$$ = $1;}

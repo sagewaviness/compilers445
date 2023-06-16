@@ -148,6 +148,8 @@ char *varKindTokenStr(int kind)
     }
 }
 
+// allocate a FIX BUFFER.  You must copy the string if you
+// // are referencing the function twice in the same printf for example.
 char expTypeToStrBuffer[80]; 
 char *expTypeToStr(ExpType type, bool isArray, bool isStatic)
 {
@@ -176,53 +178,13 @@ char *expTypeToStr(ExpType type, bool isArray, bool isStatic)
                 sprintf(buffer, "invalid expType: %d", (int)type);
         return buffer;
     }
-   
+   // add static and array attributes
+    // static type int
+    // static array of type int
     sprintf(expTypeToStrBuffer, "%s%s%s", isStatic ? "static" : "", isArray ? "array of " : "");
-    strdup(expTypeToStrBuffer);
+    return strdup(expTypeToStrBuffer); // memory leak
+    
 }
-
-// allocate a FIX BUFFER.  You must copy the string if you
-// // are referencing the function twice in the same printf for example.
-// char expTypeToStrBuffer[80];
-// char *expTypeToStr(ExpType type, bool isArray, bool isStatic)
-// {
-//     char *typeName;
-//
-//         switch (type) {
-//             case Void:
-//                typeName = (char *)"type void";
-//                        break;
-//                            case Integer:
-//                               typeName = (char *)"type int";
-//                                       break;
-//                                           case Boolean:
-//                                              typeName = (char *)"type bool";
-//                                                      break;
-//                                                          case Char:
-//                                                             typeName = (char *)"type char";
-//                                                                     break;
-//                                                                         case UndefinedType:
-//                                                                            typeName = (char *)"undefined type";
-//                                                                                    break;
-//                                                                                        default:
-//                                                                                                char *buffer;
-//
-//                                                                                                        buffer = new char [80];
-//                                                                                                                sprintf(buffer, "invalid expType: %d", (int)type);
-//
-//                                                                                                                   return buffer;
-//                                                                                                                       }
-//
-//                                                                                                                       // add static and array attributes
-//                                                                                                                       // static type int
-//                                                                                                                       // static array of type int
-//                                                                                                                           sprintf(expTypeToStrBuffer, "%s%s%s",
-//                                                                                                                                       (isStatic ? "static " : ""),
-//                                                                                                                                                   (isArray ? "array of " : ""),
-//                                                                                                                                                               typeName);
-//
-//                                                                                                                                                                   return strdup(expTypeToStrBuffer); // memory leak
-//                                                                                                                                                                   }
 
 void printTree(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showAllocation)
 {
@@ -235,23 +197,3 @@ char *tokenToStr(int type)
   // add stuff here
   return expTypeToStrBuffer;
 }
-
-//  newExpNode • exp
-//     • simpleExp
-//     • andExp
-//     • unaryRelExp • relExp
-//     • minmaxExpn • sumExp
-//     • mulExp
-//     • unaryExp
-//     • mutable
-//     • call
-//     • constant
-// • newDeclNode 
-//  • varDeclId
-//  • funDecl
-//  • matched : FOR ID '=' iterRange DO matched
-//  • unmatched : FOR ID '=' iterRange DO unmatched
-// • printTree
-//  • Put a call to printTree at the end of your main
-// to print dot tree add this line after your tree is created 
-// printDotTree(astDot, syntaxTree, false, false);
