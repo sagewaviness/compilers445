@@ -23,7 +23,6 @@ TreeNode *newStmtNode(StmtKind kind, TokenData *token, TreeNode *c0, TreeNode *c
 {
     TreeNode *newNode; 
     int i; 
-    //printf("in new statment node int %d, char %c\n", token,token );
     newNode = new TreeNode;
     newNode->nodeNum = nodeNum++;
 
@@ -54,7 +53,15 @@ TreeNode *newStmtNode(StmtKind kind, TokenData *token, TreeNode *c0, TreeNode *c
 
     return newNode;
 }
-
+/**
+ * TreeNode *newExpNode  adds expression nodes to the tree
+ * 
+ * @param  {ExpKind} kind     : the "kind" of exp  being added AssignK, CallK, ConstantK, IdK, OpK
+ * @param  {TokenData*} token : the token data
+ * @param  {TreeNode*} c0     : child 1
+ * @param  {TreeNode*} c1     : child 2
+ * @param  {TreeNode*} c2     : childe 3
+ */
 TreeNode *newExpNode(ExpKind kind, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2)
 {
     TreeNode *newNode;
@@ -92,7 +99,16 @@ TreeNode *newExpNode(ExpKind kind, TokenData *token, TreeNode *c0, TreeNode *c1,
     return newNode;
 }
 
-
+/**
+ * TreeNode*newDeclNode adds declaration node to tree
+ * 
+ * @param  {DeclKind} kind    : the kind of declaration node Vark Funck or Paramk
+ * @param  {ExpType} type     : The type Void, Integer, Boolean, Char, UndefinedType
+ * @param  {TokenData*} token :  data passed
+ * @param  {TreeNode*} c0     : child 1 
+ * @param  {TreeNode*} c1     : child 2
+ * @param  {TreeNode*} c2     : child 3
+ */
 TreeNode *newDeclNode(DeclKind kind, ExpType type, TokenData *token, TreeNode *c0, TreeNode *c1, TreeNode *c2)
 {
     TreeNode *newNode; 
@@ -129,7 +145,11 @@ TreeNode *newDeclNode(DeclKind kind, ExpType type, TokenData *token, TreeNode *c
 
     return newNode;
 }
-
+/**
+ * char*varKindToStr : print var kind
+ * 
+ * @param  {int} kind : the kind needed to be printed
+ */
 char *varKindToStr(int kind)
 {
     switch(kind)
@@ -151,6 +171,13 @@ char *varKindToStr(int kind)
 }
 
 char expTypeToStrBuffer[80];
+/**
+ * char*expTypeToStr add string to print for given expression type
+ * 
+ * @param  {ExpType} type  : Void, Integer, Boolean, Char,  or UndefinedType
+ * @param  {bool} isArray  : if there is an array 
+ * @param  {bool} isStatic : if the expression is static
+ */
 char *expTypeToStr(ExpType type, bool isArray, bool isStatic)
 {
     char *typeName;
@@ -185,7 +212,13 @@ char *expTypeToStr(ExpType type, bool isArray, bool isStatic)
 
     return strdup(expTypeToStrBuffer); // memory leak
 }
-
+/**
+ * void printTreeNode : prints each node out 
+ * @param  {FILE*} out           : writing to file OUT
+ * @param  {TreeNode*} tree      : the completed tree
+ * @param  {bool} showExpType    : if need to show exp type print
+ * @param  {bool} showAllocation : if show allocation print 
+ */
 void printTreeNode(FILE *out, TreeNode *tree, bool showExpType, bool showAllocation) 
 {
     if (tree->nodekind == DeclK) 
@@ -317,14 +350,26 @@ void printTreeNode(FILE *out, TreeNode *tree, bool showExpType, bool showAllocat
     fprintf(out, " [line: %d]", tree->lineno); 
 }  
 
-
+/**
+ *  void printSpaces and dots out for the tree 
+ * @param  {FILE*} out : writes to file out 
+ * @param  {int} depth : depth = number of dots in 
+ */
 void printSpaces(FILE *out,int depth)
 {
    for(int i =0; i < depth; i++){
    fprintf(out, ".   ");
    }
 }
-
+/**
+ * void printFullTree             : helper function for printTree
+ * @param  {FILE*} out            : writes output to file out
+ * @param  {TreeNode*} syntaxTree : the tree we are printing
+ * @param  {bool} showExpType     : 
+ * @param  {bool} showAllocation  : 
+ * @param  {int} depth            : depth of tree
+ * @param  {int} sibcount         : amount of siblings
+ */
 void printFullTree(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showAllocation, int depth, int sibcount)
 {
     int childcount; 
@@ -355,7 +400,13 @@ void printFullTree(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showA
     }
     fflush(out);   
 }
-
+/**
+ * void printTree           : called print tree function
+ * @param  {FILE*} out            : writes to out
+ * @param  {TreeNode*} syntaxTree : tree beign printed
+ * @param  {bool} showExpType     : if show exp print
+ * @param  {bool} showAllocation  : if show alloc print
+ */
 void printTree(FILE *out, TreeNode *syntaxTree, bool showExpType, bool showAllocation)
 {
     printFullTree(out, syntaxTree, showExpType, showAllocation, 1, 1);
