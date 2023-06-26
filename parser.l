@@ -17,6 +17,8 @@ char *lastToken = (char*)"";
 
 int setValue(int linenum, int tokenClass, char *svalue)
 {
+   /////////
+   //printf("int %d char %c \n",tokenClass, tokenClass);
    yylval.tokenData = new TokenData;
    yylval.tokenData->tokenclass = tokenClass;
    yylval.tokenData->linenum = linenum;
@@ -26,7 +28,26 @@ int setValue(int linenum, int tokenClass, char *svalue)
    // may cause overflow
    yylval.tokenData->nvalue = atoi(svalue);
    yylval.tokenData->svalue = strdup(svalue);
-
+   
+   switch(tokenClass)
+   {
+      case BOOLCONST: 
+	yylval.tokenData->nvalue = ((lastToken[0]=='t') ? 1 : 0);
+	break;
+      case STRINGCONST: 
+	yylval.tokenData->nvalue = strlen(svalue);
+        break;
+      case CHARCONST:
+	yylval.tokenData->cvalue = svalue[1];
+        if(svalue[1] == '\\')
+        {
+	    if(svalue[2] == 'n')
+                yylval.tokenData->cvalue = '\n';
+            if(svalue[2] == '0')
+		yylval.tokenData->cvalue = '\0';
+        }
+        break;
+   } 
    return tokenClass;
 }
 
@@ -35,15 +56,12 @@ int setValue(int linenum, int tokenClass, char *svalue)
 %option noyywrap
 
 
-letter      	[a-zA-Z_]
+letter      	[a-zA-Z]
 digit    	[0-9]
 underbar	[_]
 quote    	[\']
 letdig      	{digit}|{letter}|{underbar}
-limitters   	[\;\,\(\)\{\}\[\]]
 op              [\(\)\*\+\,\-\/\:\;\<\=\>\?\[\]\%\{\}]
-colon           [\:]
-op2             {op}|{limitters}|{colon}
 id   		{letter}{letdig}*
 numbers  	{digit}+
 chars 		[\']\\?.[\']
@@ -58,9 +76,6 @@ comment         "//".*
 "if"	{return setValue(line, IF, yytext);}
 "then"  {return setValue(line, THEN, yytext);}
 "else"  {return setValue(line, ELSE, yytext);}
-"end"   {return setValue(line, END, yytext);}
-"loop"  {return setValue(line, LOOP, yytext);}
-"loop forever"  {return setValue(line, INFINITYLOOP, yytext);}
 "return"        {return setValue(line, RETURN, yytext);}
 "while"         {return setValue(line, WHILE, yytext);}
 "do"            {return setValue(line, DO, yytext);}
@@ -72,7 +87,6 @@ comment         "//".*
 "true"          {return setValue(line, BOOLCONST, yytext);}
 "false"         {return setValue(line, BOOLCONST, yytext);}
 "by"            {return setValue(line, BY, yytext);}
-"eslif"         {return setValue(line, ELSIF, yytext);}
 "or"            {return setValue(line, OR, yytext);}
 "char"          {return setValue(line, CHAR, yytext);}
 "+="            {return setValue(line, ADDASS, yytext);}
@@ -95,8 +109,8 @@ comment         "//".*
 {id}    	{return setValue(line, ID, yytext);}
 {strings}       {return setValue(line, STRINGCONST, yytext);}
 {chars}		{return setValue(line, CHARCONST, yytext);}
-{op}|{op2}      {return setValue(line, OP, yytext);}
-{comment}       {return setValue(line, COMMENT, yytext);}
+{op}      {return setValue(line, yytext[0], yytext);}
+{comment}       ;
 \n              {line++ ;}
 {whitespace}+  ;
 .               {printf("ERROR(%d): Token error, invalid or misplaced input character: \'%c\'. Character Ignored.\n", line, yytext[0]);}

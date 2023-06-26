@@ -1,0 +1,4 @@
+#DRBC all production rule test case
+int x;
+main() {
+}

@@ -1,5 +1,4 @@
 %{
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
@@ -16,24 +15,24 @@ extern "C" FILE *yyin;
 
 void yyerror(const char *msg);
 
-//void printToken(TokenData myData, string tokenName, int type = 0) 
-//{
-//	cout << "Line: " << myData.linenum << " Type: " << tokenName;
-//	if(type==0)
-//   {
-//      cout << " Token: " << myData.tokenstr;
-//   }
-//	if(type==1)
-//   {
-//      cout << " Token: " << myData.nvalue;
-//   }
-//	if(type==2)
-//   {
-//      cout << " Token: " << myData.cvalue;
-//   }
+void printToken(TokenData myData, string tokenName, int type = 0) 
+{
+	cout << "Line: " << myData.linenum << " Type: " << tokenName;
+	if(type==0)
+   {
+      cout << " Token: " << myData.tokenstr;
+   }
+	if(type==1)
+   {
+      cout << " Token: " << myData.nvalue;
+   }
+	if(type==2)
+   {
+      cout << " Token: " << myData.cvalue;
+   }
 		
-//	cout << endl;
-//}
+	cout << endl;
+}
 
 TreeNode *addSibling(TreeNode *t, TreeNode *s)
 {
@@ -73,18 +72,6 @@ TreeNode *syntaxTree;
    ExpType type; // for passing typespec up the tree 
 }
 
-%token <tokenData> IF THEN ELSE END REPEAT ASSIGN TO 
-%token <tokenData> INFINITYLOOP RETURN WHILE DO BREAK 
-%token <tokenData> AND NOT BOOLCONST ELSIF 
-%token <tokenData> PLUSEQ MULASS TIMEEQ DIVASS LEQ EQ
-%token <tokenData> SUBASS ADDASS INC DEC NEQ 
-%token <tokenData> STATIC INT BOOL GEQ MIN MAX 
-%token <tokenData> BY ID NUMCONST STRINGCONST CHARCONST E OR OP
-%token <tokenData> PRECOMPILER LOOP FOR CHAR
-%token <tokenData>  ERROR COMMENT
-%token <tokenData>  '*' '+' '{' '}' '[' ']' ';' '>' '<' '-' '=' ':' ',' '/' '(' ')' '%' '?'
-%token <tokenData> CHSIGN SIZEOF LASTOP
-
 %type <tree>  program precomList declList decl varDecl scopedVarDecl 
 %type <tree>  varDeclList varDeclInit varDeclId 
 %type <tree> funDecl localDecls 
@@ -95,26 +82,41 @@ TreeNode *syntaxTree;
 %type <tree> expstmt  returnstmt breakstmt compoundstmt 
 %type <tree> exp simpleExp andExp unaryRelExp relExp sumExp minmaxExp
 %type <tree> mulExp unaryExp
-%type <tokenData> assignop unaryop minmaxop relop sumop mulop 
-%type <tree> mutablel immutablel factor
+%type <tree> mutable immutable factor
 %type <tree> call constant
 %type <tree> args argList 
 %type <type> typeSpec
+%type <tokenData> assignop minmaxop mulop relop sumop unaryop
+
+
+%token <tokenData> FIRSTOP
+%token <tokenData> ADDASS AND DEC DIVASS EQ GEQ INC LEQ MAX MIN MULASS NEQ NOT OR SUBASS
+%token <tokenData> CHSIGN SIZEOF
+%token <tokenData> '*' '+' '-' '/' '<' '=' '>' '%' '?' 
+%token <tokenData> PRECOMPILER
+%token <tokenData> LASTOP 
+
+// we require that all token classes larger than 255 be followed by LASTTERM
+%token <tokenData> BOOL BREAK BY CHAR DO ELSE FOR IF INT RETURN STATIC THEN TO WHILE
+%token <tokenData> BOOLCONST CHARCONST ID NUMCONST STRINGCONST
+%token <tokenData> '{' ';' ':' '}' '(' ')' ',' '[' ']'
+%token <tokenData> LASTTERM
 %%
 
-program : precomList declList 
+program : precomList declList          {syntaxTree = $2;}
         ;
-precomList : precomList PRECOMPILER    {$$ = $1;}
-            | PRECOMPILER              {printf("%s\n", yyval.tokenData->tokenstr);}
-            | /* empty */              {$$ = NULL;}
-            ;
 
-declList : declList decl                {}
-         | decl                         {}
+precomList  : precomList PRECOMPILER                      { $$ = NULL; printf("%s\n", yylval.tokenData->tokenstr);}
+             | PRECOMPILER                                 { $$ = NULL; printf("%s\n", yylval.tokenData->tokenstr);}
+             | /* empty */                                 { $$ = NULL;}
+             ;
+
+declList : declList decl                {$$ = addSibling($1,$2);}
+         | decl                         {$$ = $1;}
          ;
 
-decl : varDecl                          {}
-     | funDecl                          {}
+decl : varDecl                          {$$ = $1;}
+     | funDecl                          {$$ = $1;}
      ;
 
 varDecl :typeSpec varDeclList ';'       {$$ = $2; setType($2, $1, false); yyerrok;}
@@ -124,24 +126,27 @@ scopedVarDecl : STATIC typeSpec varDeclList ';'  {$$ = $3; setType($3,$2,true); 
               | typeSpec varDeclList ';' {$$ = $2; setType($2, $1, false); yyerrok;}
               ;
 varDeclList : varDeclList ',' varDeclInit{$$ = addSibling($1, $3); yyerrok;}
-            | varDeclInit {$$ = $1;}
+            | varDeclInit                {$$ = $1;}
             ;
 
-varDeclInit : varDeclId {$$ = $1;}
+varDeclInit : varDeclId                   {$$ = $1;}
+            | varDeclId ':' simpleExp     { $$ = $1; if ($$ != NULL) $$->child[0] = $3;}
             ;
 
-varDeclId : ID{$$ = newDeclNode(VarK, UndefinedType, $1);}
-          | ID '[' NUMCONST ']' {}
+varDeclId : ID                            {$$ = newDeclNode(VarK, UndefinedType, $1);}
+          | ID '[' NUMCONST ']'           {$$ = newDeclNode(VarK, UndefinedType,$1); 
+				            $$->isArray = true;
+				            $$->size = $3->nvalue + 1;}
           ;
-typeSpec : INT {$$ = Integer;}
-         | BOOL {$$ = Boolean;}
-         | CHAR  {$$ = Char;}
+typeSpec : INT 				{$$ = Integer;}	
+         | BOOL 			{$$ = Boolean;}
+         | CHAR  			{$$ = Char;}
          ;
 funDecl : typeSpec ID '(' parms ')' stmt       {$$ = newDeclNode(FuncK, $1, $2, $4, $6);}
         | ID '(' parms ')' stmt                {$$ = newDeclNode(FuncK, Void, $1, $3, $5);}
         ;
 
-parms : parmList   {$$ = $1;}
+parms : parmList   	      {$$ = $1;}
       | /* empty */           {$$ = NULL;}
       ;
 
@@ -153,37 +158,49 @@ parmTypeList : typeSpec parmIdList {$$ = $2; setType($2, $1, false);}
              ;
 
 parmIdList : parmIdList ',' parmId { $$ = addSibling($1, $3);}
-           | parmId {}
+           | parmId {$$ = $1;}
            ;
 
-parmId : ID  {}
-       | ID '[' ']'  {}
+parmId : ID  {$$ = newDeclNode(ParamK, UndefinedType, $1);
+                  $$->isArray = false; 
+    		  $$->size = 1;}
+       | ID '[' ']'  {$$ = newDeclNode(ParamK, UndefinedType, $1);
+          	        $$->isArray = true;
+                	$$->size = 1;}
        ;
 
 stmt : matched  {$$ = $1;}
      | unmatched {$$ = $1;}
      ;
 
-matched  : IF simpleExp THEN matched ELSE matched{}
-         | WHILE simpleExp DO matched{}
-         | FOR ID '=' iterRange DO matched {}
-         | expstmt{}
-         | compoundstmt{}
-         | returnstmt {}
-         | breakstmt {}
+matched  : IF simpleExp THEN matched ELSE matched{$$ = newStmtNode(IfK, $1,$2,$4,$6);}
+         | WHILE simpleExp DO matched{$$ = newStmtNode(WhileK,$1,$2,$4);}
+         | FOR ID '=' iterRange DO matched {$$ = newStmtNode(ForK, $1, NULL, $4,$6);
+						$$->child[0] = newDeclNode(VarK,Integer,$2);
+						$$->child[0]->attr.name = $2->svalue;
+						$$->child[0]->isArray = false;}
+         | expstmt{$$ = $1;}
+         | compoundstmt{$$ = $1;}
+         | returnstmt {$$ = $1;}
+         | breakstmt {$$ = $1;}
          ;
 
-iterRange : simpleExp TO simpleExp  {}
-          | simpleExp TO simpleExp BY simpleExp{}
+iterRange : simpleExp TO simpleExp  {$$ = newStmtNode(RangeK, $2,$1,$3);}
+          | simpleExp TO simpleExp BY simpleExp{$$ = newStmtNode(RangeK, $2,$1,$3,$5);}
           ;
 
-unmatched : IF simpleExp THEN stmt{}
-   | IF simpleExp THEN matched ELSE unmatched {}
-   | WHILE simpleExp DO unmatched{}
-   | FOR ID '=' iterRange DO unmatched{}
+unmatched : IF simpleExp THEN stmt{$$ = newStmtNode(IfK, $1,$2,$4);}
+   | IF simpleExp THEN matched ELSE unmatched {$$ = newStmtNode(IfK, $1,$2,$4,$6);}
+   | WHILE simpleExp DO unmatched{$$ = newStmtNode(WhileK, $1,$2,$4);}
+   | FOR ID '=' iterRange DO unmatched{$$ = newStmtNode(ForK,$1,NULL,$4,$6);
+					$$->child[0] = newDeclNode(VarK,Integer,$2);
+					$$->child[0]->attr.name = $2->svalue;
+					$$->child[0]->isArray = false;
+				        $$->child[0]->size = 1;}
    ;
 
-expstmt : exp ';'{$$ = $1;}
+expstmt : exp ';'  {$$ = $1;}
+        | ';'      {$$ = NULL;}
          ;
 
 compoundstmt : '{' localDecls stmtList '}' {$$ = newStmtNode(CompoundK, $1, $2, $3);}
@@ -204,11 +221,11 @@ returnstmt : RETURN ';' {$$ = newStmtNode(ReturnK, $1);}
 breakstmt : BREAK ';'      {$$ = newStmtNode(BreakK, $1);}
           ;
 
-exp : mutablel assignop exp   {$$ = newExpNode(AssignK, $2, $1, $3);}
-      | mutablel INC    {$$ = newExpNode(AssignK, $2, $1);}
-      | mutablel DEC    {$$ = newExpNode(AssignK, $2, $1);}
+exp : mutable assignop exp   {$$ = newExpNode(AssignK, $2, $1, $3);}
+      | mutable INC    {$$ = newExpNode(AssignK, $2, $1);}
+      | mutable DEC    {$$ = newExpNode(AssignK, $2, $1);}
       | simpleExp       {$$ = $1;}
-      | mutablel assignop error  {$$ = NULL;}
+      | mutable assignop error  {$$ = NULL;}
       ;
 
 assignop : '='    {$$ = $1;}
@@ -277,26 +294,27 @@ unaryop : '-'        {$1->tokenclass = CHSIGN; $$ = $1;}
          | '?'       {$$ = $1;}
          ;
 
-factor : immutablel  {$$ = $1;}
-      | mutablel     {$$ =$1;}
+factor : immutable  {$$ = $1;}
+      | mutable     {$$ =$1;}
       ;
 
-mutablel : ID              {$$ = newExpNode(IdK, $1); 
+mutable : ID              {$$ = newExpNode(IdK, $1); 
 			    $$->attr.name = $1->svalue; 
 			    $$->isArray = false; }
          | ID '[' exp ']'  {$$ = newExpNode(OpK, $2, NULL, $3);
 			    $$->child[0] = newExpNode(IdK,$1);
 			    $$->child[0]->attr.name = $1->svalue; 
-			    $$->isArray = false; 
+			    $$->isArray = false;
+			     
 				}
          ;
 
-immutablel : '(' exp ')'   {$$ = $2;}
-            | call         {$$ = $1;}
-            | constant  {$$ = $1;}
+immutable : '(' exp ')'   {$$ = $2;}
+            | call        {$$ = $1;}
+            | constant    {$$ = $1;}
             ;
 
-call : ID '(' args ')'  {$$ = newExpNode(CallK, $1); $$->attr.name = $1->svalue;}
+call : ID '(' args ')'  {$$ = newExpNode(CallK, $1, $3); $$->attr.name = $1->svalue;}
      ;
 
 args : argList                      {$$ = $1;}
@@ -325,7 +343,7 @@ constant : NUMCONST     { $$ = newExpNode(ConstantK, $1);
          | BOOLCONST    {$$ = newExpNode(ConstantK, $1); 
                            $$->attr.value = $1->nvalue;
                            $$->type = Boolean; 
-                           $$->isArray = true;
+                           $$->isArray = false;
                            $$->size = 1;}
          ;
 
@@ -335,8 +353,79 @@ void yyerror (const char *msg)
    cout << "Error: " <<  msg << endl;
 }
 
+char *largerTokens[LASTTERM+1];
+void initTokenStrings() 
+{
+   //const char* defaultMessage = "Unknown (or more likely unimplemented) largerTokens"; 
+   //for (int q = 0; q < 512; q++) 
+   //{
+     //largerTokens[q] = (char*)defaultMessage; 
+   //}
+   largerTokens[ADDASS] = (char *)"+=";
+   largerTokens[AND] = (char *)"and";
+   largerTokens[BOOL] = (char *)"bool";
+   largerTokens[BOOLCONST] = (char *)"boolconst";
+   largerTokens[BREAK] = (char *)"break";
+   largerTokens[BY] = (char *)"by";
+   largerTokens[CHAR] = (char *)"char";
+   largerTokens[CHARCONST] = (char *)"charconst";
+   largerTokens[CHSIGN] = (char *)"chsign";
+   largerTokens[DEC] = (char *)"--";
+   largerTokens[DIVASS] = (char *)"/=";
+   largerTokens[DO] = (char *)"do";
+   largerTokens[ELSE] = (char *)"else";
+   largerTokens[EQ] = (char *)"==";
+   largerTokens[FOR] = (char *)"for";
+   largerTokens[GEQ] = (char *)">=";
+   largerTokens[ID] = (char *)"id";
+   largerTokens[IF] = (char *)"if";
+   largerTokens[INC] = (char *)"++";
+   largerTokens[INT] = (char *)"int";
+   largerTokens[LEQ] = (char *)"<=";
+   largerTokens[MAX] = (char *)":>:";
+   largerTokens[MIN] = (char *)":<:";
+   largerTokens[MULASS] = (char *)"*=";
+   largerTokens[NEQ] = (char *)"!=";
+   largerTokens[NOT] = (char *)"not";
+   largerTokens[NUMCONST] = (char *)"numconst";
+   largerTokens[OR] = (char *)"or";
+   largerTokens[RETURN] = (char *)"return";
+   largerTokens[SIZEOF] = (char *)"sizeof";
+   largerTokens[STATIC] = (char *)"static";
+   largerTokens[STRINGCONST] = (char *)"stringconst";
+   largerTokens[SUBASS] = (char *)"-=";
+   largerTokens[THEN] = (char *)"then";
+   largerTokens[TO] = (char *)"to";
+   largerTokens[WHILE] = (char *)"while";
+   largerTokens[LASTTERM] = (char *)"lastterm";
+}
+
+static char tokenBuffer[16];
+char *tokenToStr(int type)
+{
+    if (type > LASTTERM) {
+      //////////////
+    // printf("int %d char %c lastterm %d\n", type,type, LASTTERM);
+      return (char *)"UNKNOWN";
+    }
+    else if (type > 256) {
+      return largerTokens[type];
+    }
+    else if ((type < 32) || (type > 127)) {
+      sprintf(tokenBuffer, "Token#%d", type);
+    } else {
+      tokenBuffer[0] = type;
+      tokenBuffer[1] = '\0';
+    }
+    return tokenBuffer;
+}
+
 int main(int argc, char **argv) {
-   //yylval.tokenData.linenum = 1;
+   //yylval.tokenData->linenum = 1;
+   initTokenStrings();
+   yylval.tokenData = (TokenData*)malloc(sizeof(TokenData));
+   yylval.tree = (TreeNode*)malloc(sizeof(TreeNode));
+     
    numErrors = 0; 
    numWarnings = 0; 
    int index;
@@ -345,7 +434,6 @@ int main(int argc, char **argv) {
    extern FILE *yyin;
    
    int ch;
-
    while ((ch = getopt(argc, argv, "d")) != -1) {
       switch (ch) {
          case 'd':
@@ -357,7 +445,6 @@ int main(int argc, char **argv) {
                ;
       }
    }
-
    if ( optind == argc ) yyparse();
    for (index = optind; index < argc; index++)
    {
@@ -366,7 +453,7 @@ int main(int argc, char **argv) {
       fclose (yyin);
    }
    if (numErrors==0) {
-      printTree(stdout, syntaxTree, true, true);
+      printTree(stdout, syntaxTree, false, false);
       if(dotAST) {
          printDotTree(stdout, syntaxTree, false, false);
       }
@@ -376,6 +463,9 @@ int main(int argc, char **argv) {
       printf("Errors: %d\n", numErrors);
       printf("-----------\n");
    }
+   
+   printf("Number of warnings: %d\n", numWarnings);
+   printf("Number of errors: %d\n", numErrors);
    return 0;
 }
 
