@@ -3,6 +3,8 @@ To compile:
   make
 
 To run:
-  ./c- < fishy.c-
-Or:
-  ./c- < factC.c-
+  ./bC test0.bC
+
+submit:
+  /y/shared/Engineering/cs-drbc/submit445 w02
+
