@@ -1,4 +1,5 @@
 %{
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
@@ -19,17 +20,17 @@ void printToken(TokenData myData, string tokenName, int type = 0)
 {
 	cout << "Line: " << myData.linenum << " Type: " << tokenName;
 	if(type==0)
-   {
-      cout << " Token: " << myData.tokenstr;
-   }
+  {
+     cout << " Token: " << myData.tokenstr;
+  }
 	if(type==1)
-   {
-      cout << " Token: " << myData.nvalue;
-   }
+  {
+     cout << " Token: " << myData.nvalue;
+  }
 	if(type==2)
-   {
-      cout << " Token: " << myData.cvalue;
-   }
+  {
+     cout << " Token: " << myData.cvalue;
+  }
 		
 	cout << endl;
 }
@@ -71,6 +72,7 @@ TreeNode *syntaxTree;
    TreeNode *tree;
    ExpType type; // for passing typespec up the tree 
 }
+
 
 %type <tree>  program precomList declList decl varDecl scopedVarDecl 
 %type <tree>  varDeclList varDeclInit varDeclId 
@@ -150,11 +152,11 @@ parms : parmList   	      {$$ = $1;}
       | /* empty */           {$$ = NULL;}
       ;
 
-parmList : parmList ';' parmTypeList {$$ = addSibling($1,$3);}
-         | parmTypeList  {$$ = $1;}
+parmList : parmList ';' parmTypeList           {$$ = addSibling($1,$3);}
+         | parmTypeList                        {$$ = $1;}
          ;
 
-parmTypeList : typeSpec parmIdList {$$ = $2; setType($2, $1, false);}
+parmTypeList : typeSpec parmIdList             {$$ = $2; setType($2, $1, false);}
              ;
 
 parmIdList : parmIdList ',' parmId { $$ = addSibling($1, $3);}
@@ -169,8 +171,8 @@ parmId : ID  {$$ = newDeclNode(ParamK, UndefinedType, $1);
                 	$$->size = 1;}
        ;
 
-stmt : matched  {$$ = $1;}
-     | unmatched {$$ = $1;}
+stmt : matched                                 {$$ = $1;}
+     | unmatched                               {$$ = $1;}
      ;
 
 matched  : IF simpleExp THEN matched ELSE matched{$$ = newStmtNode(IfK, $1,$2,$4,$6);}
