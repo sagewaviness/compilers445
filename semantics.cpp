@@ -11,16 +11,15 @@ extern int numErrors;
 extern int numWarnings;
 extern bool printErrors;
 extern bool printWarnings;
-//
-//
+
 // // SPECIAL OPTIONS
 static bool noDuplicateUndefs;
 static bool shareCompoundSpace;
-//
+
 // // expression types
  static ExpectType expectType[LASTOP];
  static ReturnType returnType[LASTOP];
-//
+
 // // memory offsets are GLOBAL
 static int goffset;                   // top of global space
 static int foffset;                   // top of local space
@@ -36,7 +35,11 @@ void traverseStmtK(TreeNode *current, SymbolTable *symtab);
 void traverseExpK(TreeNode *current, SymbolTable *symtab);
 
 
-
+/**
+ * TreeNode*loadIOLib get treenode kinds and  assign them 
+ * 
+ * @param  {TreeNode*} syntree : syntax tree to pass
+ */
 TreeNode *loadIOLib(TreeNode *syntree)
 {
    TreeNode *input, *output, *param_output; 
@@ -110,10 +113,16 @@ TreeNode *loadIOLib(TreeNode *syntree)
    return input;
 }
 
+
+/**
+ * 
+ * @param  {TreeNode*} current   : current tree node 
+ * @param  {SymbolTable*} symtab : symbol table 
+ *
+ */
 //done til assignment 5 no touchy 
 void traverseDeclK(TreeNode *current, SymbolTable *symtab)
 {
-///use exptostring and varkindtostr for symtab insert//lookup functions 
  char *id = strdup(current->attr.name);
  static int varCounter = 0;
    switch(current->kind.decl) 
@@ -174,6 +183,13 @@ void traverseDeclK(TreeNode *current, SymbolTable *symtab)
 
 }
 
+/**
+ * traverseStmtK travers the tree ifor statement kind and assigning size 
+ *       and and types
+ * 
+ * @param  {TreeNode*} current   :  for current node get it set up correctly 
+ * @param  {SymbolTable*} symtab : add to symbol table
+ */
 
 void traverseStmtK(TreeNode *current, SymbolTable *symtab)
 {
@@ -202,6 +218,11 @@ void traverseStmtK(TreeNode *current, SymbolTable *symtab)
    return;
 }
 
+/**
+ * traverseExpK set current node type/size 
+ * @param  {TreeNode*} current   :  current node 
+ * @param  {SymbolTable*} symtab : symbol table type
+ */
 void traverseExpK(TreeNode *current, SymbolTable *symtab)
 { 
     
@@ -277,6 +298,12 @@ void traverseExpK(TreeNode *current, SymbolTable *symtab)
    return;
 }
 
+/**
+ * treeTraverse()  traberse the tree and call needed functions for 
+ *          certain kinds 
+ * @param  {TreeNode*} current   : 
+ * @param  {SymbolTable*} symtab : 
+ */
 void treeTraverse(TreeNode *current, SymbolTable *symtab)
 {
    bool isCompound = false;
@@ -301,10 +328,11 @@ void treeTraverse(TreeNode *current, SymbolTable *symtab)
       symtab->enter("NewScope from " + (std::string)id);
    }
    
-   int tempOff = foffset;       
+   int tempOff = foffset;
+   //must traverse to first child       
    treeTraverse(current->child[0], symtab);
                
-
+ 
    switch(current->nodekind)
    {
       case DeclK:
@@ -322,28 +350,17 @@ void treeTraverse(TreeNode *current, SymbolTable *symtab)
           break;
    }
    
-/*   // if siblings traverse to sibling
-   if(current->sibling) 
-   {
-      treeTraverse(current->sibling, symtab);
-   }
-    for(int childcount =0; childcount < 3; childcount++)
-    {
-        if(current->child[childcount])
-        {
-	  treeTraverse(current->child[childcount], symtab);
-        }
-    }
-  */
 
-   if(current->nodekind == StmtK && current->kind.stmt == ForK){
+   if(current->nodekind == StmtK && current->kind.stmt == ForK)
+   {
       foffset -= 2;
-  }	
-	
+   }	
+	//now can travel to child 1 and 2 
    treeTraverse(current->child[1], symtab);
    treeTraverse(current->child[2], symtab);
 
-   if(current->nodekind == StmtK && current->kind.stmt == CompoundK){
+   if(current->nodekind == StmtK && current->kind.stmt == CompoundK)
+   {
       current->size =foffset;
       foffset = tempOff;
    }
@@ -352,6 +369,7 @@ void treeTraverse(TreeNode *current, SymbolTable *symtab)
    {
       current->size = foffset;
    }	
+
    if(isCompound)
    {
      symtab->leave();
@@ -372,6 +390,15 @@ static int varCounter = 0;
 static bool isAssignedErrOk = true;
 static bool isUsedErrOk = true;
 
+/**
+ * TreeNode*semanticAnalysis set left hand side of tree (last operator)
+ * 
+ * @param  {TreeNode*} syntree         : the syntax tree we are searchin g
+ * @param  {bool} shareCompoundSpaceIn : is it in shared space
+ * @param  {bool} noDuplicateUndefsIn  : is it duplicated 
+ * @param  {SymbolTable*} symtabX      : symtab referencing 
+ * @param  {int} globalOffset          : global opps 
+ */
 TreeNode *semanticAnalysis(TreeNode *syntree,bool shareCompoundSpaceIn, bool noDuplicateUndefsIn, SymbolTable *symtabX, int &globalOffset)
 {
    noDuplicateUndefs = noDuplicateUndefsIn;
