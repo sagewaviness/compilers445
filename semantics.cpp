@@ -140,28 +140,29 @@ void traverseDeclK(TreeNode *current, SymbolTable *symtab)
 	case VarK:
 	//no break here
 	case ParamK:
-		if (!symtab->insert(id, (void*)current) && current->lineno != -1) {
+		if (!symtab->insert(id, (void*)current) && current->lineno != -1) 
+      {
             //printf("SEMANTIC ERROR(%d): Symbol '%s' is already declared at line UNKNOWN.\n", current->lineno, id);
             //           // exit(1);
-                }
-	        if (symtab->depth() == 1)
-	        {
-		   current->varKind = Global;
-		   current->offset = goffset;
-	           goffset -= current->size;
-		}
-	        else if(current->isStatic)
-	        {
-		  current->varKind = LocalStatic;
-		  current->offset = goffset;
-		  goffset -= current->size;
-		  {   
-		    char *newName;
-		    newName = new char[strlen(id)+10];
-		    sprintf(newName, "%s-%d" , id , ++varCounter);
-		    delete [] newName;
-    		  }
-		}
+      }
+            if (symtab->depth() == 1)
+            {
+               current->varKind = Global;
+               current->offset = goffset;
+               goffset -= current->size;
+            }
+            else if(current->isStatic)
+            {
+               current->varKind = LocalStatic;
+               current->offset = goffset;
+               goffset -= current->size;
+               {//meant to have new scope dont delete {}   
+                  char *newName;
+                  newName = new char[strlen(id)+10];
+                  sprintf(newName, "%s-%d" , id , ++varCounter);
+                  delete [] newName;
+               }
+		      }
 		else
 		{
 		   current->varKind = Local;
@@ -169,7 +170,7 @@ void traverseDeclK(TreeNode *current, SymbolTable *symtab)
 		   foffset -= current->size;
 		}               
 		
-	        if(current->kind.decl== ParamK)
+	   if(current->kind.decl== ParamK)
 		{
 		  current->varKind = Parameter;
 		}
@@ -225,76 +226,76 @@ void traverseStmtK(TreeNode *current, SymbolTable *symtab)
  */
 void traverseExpK(TreeNode *current, SymbolTable *symtab)
 { 
-    
-     switch (current->kind.exp) 	
-     { 
-            case AssignK:
-	    case OpK: 
-                switch (returnType[current->attr.op]) 
-		{
-		  treeTraverse(current->child[0], symtab);
-		  treeTraverse(current->child[1], symtab);
-       		  case RetInt:
-            		current->type = Integer;
-            	        break;
-         	  case RetBool:
-            	       current->type = Boolean;
-            	       break;
-         	  case RetLHS:
-            	       current->type = current->child[0]->type;
-            	       if (current->attr.op == int('='))
-	               {	
-			 current->isArray = current->child[0]->isArray;
-		       }
-            	       break;
-       		}
-                break;
-            case ConstantK:
- 		current->isConst = true;
+   switch (current->kind.exp) 	
+   { 
+      case AssignK:
+      case OpK: 
+         switch (returnType[current->attr.op]) 
+         {
+            treeTraverse(current->child[0], symtab);
+            treeTraverse(current->child[1], symtab);
+            case RetInt:
+               current->type = Integer;
+               break;
+            case RetBool:
+               current->type = Boolean;
+               break;
+            case RetLHS:
+               current->type = current->child[0]->type;
+               if (current->attr.op == int('='))
+               {	
+                  current->isArray = current->child[0]->isArray;
+               }
+               break;
+            }
+            break;
+      case ConstantK:
+         current->isConst = true;
 
-                switch (current->type) 
-                {
-                     case Boolean:
-			current->type = Boolean;
-                        break;
-                     case Integer:
-                         current->type = Integer;
-                          break;
-                     case Char:
- 			    if(current->isArray)
-			    {
-				current->varKind = Global;
-                   		current->offset = goffset - 1;
-                   		goffset -= current->size;
-                            }
-                            break;
-                    case Void:
-                    case UndefinedType:
-		    	break;
- 		}               
-                break;
-	    case IdK:
-            case CallK:
-      		{ 
-		  
-		  char *id = strdup(current->attr.name);
-		  TreeNode *temp = (TreeNode*)symtab->lookup(id);
-                  
-		  //traverse tree here somehow
-		  if(temp==NULL){ 
-			// do something here 
-		  }
-		    current->type = temp->type;
-	            current->isArray = temp->isArray;
-		    current->isStatic = temp->isStatic;
-		    current->size = temp->size;
-		    current->varKind = temp->varKind;
-		    current->offset = temp->offset;
-		}
-                break;
-            default:
-                break;
-      }
+               switch (current->type) 
+               {
+                  case Boolean:
+                     current->type = Boolean;
+                     break;
+                  case Integer:
+                     current->type = Integer;
+                     break;
+                  case Char:
+                     if(current->isArray)
+                     {
+                        current->varKind = Global;
+                        current->offset = goffset - 1;
+                        goffset -= current->size;
+                     }
+                     break;
+                  case Void:
+                  case UndefinedType:
+                     break;
+               }               
+               break;
+      case IdK:
+      case CallK:
+         { 
+      
+            char *id = strdup(current->attr.name);
+            TreeNode *temp = (TreeNode*)symtab->lookup(id);
+                        
+            //traverse tree here somehow
+            if(temp==NULL)
+            { 
+            // do something here 
+            }
+            current->type = temp->type;
+            current->isArray = temp->isArray;
+            current->isStatic = temp->isStatic;
+            current->size = temp->size;
+            current->varKind = temp->varKind;
+            current->offset = temp->offset;
+         }
+         break;
+      default:
+         break;
+   }
    return;
 }
 
@@ -309,7 +310,7 @@ void treeTraverse(TreeNode *current, SymbolTable *symtab)
    bool isCompound = false;
    if(current == NULL){ return;}
    
-  if(current->nodekind == StmtK &&
+   if(current->nodekind == StmtK &&
           (current->kind.stmt == CompoundK || current->kind.stmt == ForK)) 
    {
       isCompound = true;
@@ -336,21 +337,20 @@ void treeTraverse(TreeNode *current, SymbolTable *symtab)
    switch(current->nodekind)
    {
       case DeclK:
-          traverseDeclK(current, symtab);
-	  break;
+         traverseDeclK(current, symtab);
+	      break;
       case StmtK:
-          traverseStmtK(current, symtab);
-          break;
+         traverseStmtK(current, symtab);
+         break;
       case ExpK:
-          traverseExpK(current, symtab);
-          break;
+         traverseExpK(current, symtab);
+         break;
       default: 
 	//printErrorSystem("Unknown nodekind!");
-          printf("unknown nodekind\n");
-          break;
+         printf("unknown nodekind\n");
+         break;
    }
    
-
    if(current->nodekind == StmtK && current->kind.stmt == ForK)
    {
       foffset -= 2;
@@ -455,6 +455,7 @@ TreeNode *semanticAnalysis(TreeNode *syntree,bool shareCompoundSpaceIn, bool noD
    //anything else to add
    syntree = loadIOLib(syntree);
 
+   //traverse the syntax tree
    treeTraverse(syntree, symtabX);
 
    // remember where the globals are
