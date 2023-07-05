@@ -35,7 +35,18 @@ int setValue(int linenum, int tokenClass, char *svalue)
 	yylval.tokenData->nvalue = ((lastToken[0]=='t') ? 1 : 0);
 	break;
       case STRINGCONST: 
-	yylval.tokenData->nvalue = strlen(svalue);
+	yylval.tokenData->nvalue = strlen(svalue) - 2; //take quotes off ""
+
+	//char* temp;
+	//temp = strdup(svalue);
+        //temp = &temp[1];
+	//snprintf(yylval.tokenData->svalue, yylval.tokenData->nvalue, temp);
+
+        for(int i=0 ; i < strlen(svalue)-1; i++)
+	{
+         yylval.tokenData->svalue[i] = yylval.tokenData->svalue[i+1];
+	}
+
         break;
       case CHARCONST:
 	yylval.tokenData->cvalue = svalue[1];

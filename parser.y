@@ -7,6 +7,9 @@
 #include "treeUtils.h"
 #include "dot.h"
 #include "scanType.h"
+#include "symbolTable.h"
+#include "semantics.h"
+
 using namespace std;
 
 int numErrors, numWarnings;
@@ -135,7 +138,9 @@ varDeclInit : varDeclId                   {$$ = $1;}
             | varDeclId ':' simpleExp     { $$ = $1; if ($$ != NULL) $$->child[0] = $3;}
             ;
 
-varDeclId : ID                            {$$ = newDeclNode(VarK, UndefinedType, $1);}
+varDeclId : ID                            {$$ = newDeclNode(VarK, UndefinedType, $1);
+						$$->isArray = false;
+						$$->size = 1;}
           | ID '[' NUMCONST ']'           {$$ = newDeclNode(VarK, UndefinedType,$1); 
 				                                 $$->isArray = true;
 				                                 $$->size = $3->nvalue + 1;}
@@ -424,8 +429,8 @@ char *tokenToStr(int type)
 
 int main(int argc, char **argv) {
    //yylval.tokenData->linenum = 1;
-   initTokenStrings();
-   yylval.tokenData = (TokenData*)malloc(sizeof(TokenData));
+   initTokenStrings(); 
+  yylval.tokenData = (TokenData*)malloc(sizeof(TokenData));
    yylval.tree = (TreeNode*)malloc(sizeof(TreeNode));
      
    numErrors = 0; 
@@ -434,6 +439,8 @@ int main(int argc, char **argv) {
    char *file = NULL;
    bool dotAST = false;             // make dot file of AST
    extern FILE *yyin;
+
+   int globalOffset = 0;
    
    int ch;
    while ((ch = getopt(argc, argv, "d")) != -1) {
@@ -454,10 +461,21 @@ int main(int argc, char **argv) {
       yyparse();
       fclose (yyin);
    }
+
+      
+
    if (numErrors==0) {
-      printTree(stdout, syntaxTree, false, false);
+      //set up symboltable
+      SymbolTable *symtab;
+      symtab = new SymbolTable();
+      symtab->debug(false);
+      
+      syntaxTree = semanticAnalysis(syntaxTree, true, false, symtab, globalOffset);
+
+      printTree(stdout, syntaxTree, true, true);
+
       if(dotAST) {
-         printDotTree(stdout, syntaxTree, false, false);
+         printDotTree(stdout, syntaxTree, true, false);
       }
    }
    else {

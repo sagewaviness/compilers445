@@ -35,13 +35,14 @@ TreeNode *newStmtNode(StmtKind kind, TokenData *token, TreeNode *c0, TreeNode *c
         newNode->child[0] = c0; 
         newNode->child[1] = c1; 
         newNode->child[2] = c2;
+        
+        newNode->varKind = None;
 
         newNode->sibling = NULL;
         newNode->lineno = (token ? token->linenum: -1);
         newNode->attr.name =(token ? token->svalue : strdup("BLAH"));
         
         newNode->size = 1; 
-        newNode->varKind = Local;
         newNode->offset = 0;
         newNode->isArray = false; 
         newNode->isStatic = false;
@@ -91,6 +92,8 @@ TreeNode *newExpNode(ExpKind kind, TokenData *token, TreeNode *c0, TreeNode *c1,
         newNode->isArray = false;
         newNode->isStatic = false;
         newNode->isConst = false;
+       
+       // newNode->attr.name = strdup(token->svalue);
 
         newNode->nodekind = ExpK;
         newNode->kind.exp = kind;
@@ -139,6 +142,7 @@ TreeNode *newDeclNode(DeclKind kind, ExpType type, TokenData *token, TreeNode *c
         newNode->isStatic = false;
         newNode->isConst = false; 
 
+        
         newNode->nodekind = DeclK; 
         newNode->kind.decl = kind; 
     }
@@ -310,11 +314,11 @@ void printTreeNode(FILE *out, TreeNode *tree, bool showExpType, bool showAllocat
                         case Char:
                             if (tree->isArray) {
                                 fprintf(out, "Const ");
-                            //   printf("\"");
+                               printf("\"");
                                 for (int i=0; i<tree->size-1; i++) {
                                     printf("%c", tree->attr.string[i]);
                                 }
-                            // printf("\"");
+                             printf("\"");
                             }
                 else fprintf(out, "Const '%c'", tree->attr.cvalue);
                             break;

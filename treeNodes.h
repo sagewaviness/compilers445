@@ -55,7 +55,7 @@ struct TreeNode
     // what kind of node
     int lineno;                            // linenum relevant to this node
     NodeKind nodekind;                     // type of node
-    union                                  // subtype of type
+    struct                                  // subtype of type
     {
 	DeclKind decl;                     // used when DeclK
 	StmtKind stmt;                     // used when StmtK
@@ -63,7 +63,7 @@ struct TreeNode
     } kind;
     
     // extra properties about the node depending on type of the node
-    union                                  // relevant data to type -> attr
+    struct                                  // relevant data to type -> attr
     {
         OpKind op;                         // type of token (same as in bison)
 	int value;                         // used when ConstantK: int or bool

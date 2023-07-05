@@ -1,8 +1,0 @@
-#DRBC simple file 
-
-
-main()
-{
-  int x;
-  x = 5;
-}
