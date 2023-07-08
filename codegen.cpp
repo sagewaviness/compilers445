@@ -7,7 +7,7 @@
 extern int numErrors;
 extern int numWarnings;
 //extern void yyparse();
-extern int yydebug();
+//extern int yydebug();
 extern TreeNode *syntaxTree;
 extern char **largerTokens;
 extern void initTokenStrings();
@@ -22,11 +22,17 @@ void codegenGeneral(TreeNode *currnode);
 void codegenInit(int initjump, int globalOffset);
 void codegenStatement(TreeNode *currnode);
 void codegenExpression(TreeNode *currnode);
+void codegenDecl(TreeNode *currnode);
+void initGlobalArraySizes();
+
 
 #define RETURNOFFSET -1
 #define OFPOFF 0
 
 int toffset = 0;
+
+
+
 
 void codegen(FILE *codeIn, char *srcFile, TreeNode *syntaxTree, SymbolTable *globalsIn, int globalOffset, bool linenumFlagIn)
 {
@@ -80,12 +86,16 @@ void codegenGeneral(TreeNode *currnode)
    {
      switch (currnode->nodekind) 
      {
-        case StmtK: codegenStatement(currnode); break;
+        case StmtK: 
+	   codegenStatement(currnode); 
+	   break;
         case ExpK:
            emitComment((char *)"EXPRESSION"); 
 	   codegenExpression(currnode);
            break;
-        case DeclK: codegenDecl(currnode); break;
+        case DeclK: 
+	   codegenDecl(currnode); 
+	   break;
      }
      currnode = currnode->sibling;
    }
@@ -239,6 +249,16 @@ void codegenExpression(TreeNode *currnode) {
     TreeNode *param;
     commentLineNum(currnode);
     switch(currnode->kind.exp) {
+    case OpK:
+ 	if (currnode->child[1]) {
+	   emitRM((char *)"ST", AC, toffset, FP, (char *)"Push left side"); 
+	   toffset--; 
+	   emitComment((char *)"TOFF dec:", toffset); 
+	   codegenExpression(currnode->child[1]);
+	   toffset++; 
+	   emitComment((char *)"TOFF inc:", toffset); 	
+ 	   emitRM((char *)"LD", AC1, toffset, FP, (char *)"Pop left into ac1");
+	}
     case AssignK:
             TreeNode *rhs, *lhs;
             lhs = currnode->child[0];
