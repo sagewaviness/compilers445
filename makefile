@@ -13,6 +13,9 @@ main.cpp\
 treeUtils.cpp\
 semantics.cpp\
 symbolTable.cpp\
+codegen.cpp\
+emitcode.cpp|
+
 
 HDRS =\
 scanType.h\
@@ -20,6 +23,8 @@ treeNodes.h\
 treeUtils.h\
 symbolTable.h\
 semantics.h\
+emitcode.h\
+codegen.h\
 
 OBJS = \
 $(PARSE).tab.o\
@@ -27,7 +32,8 @@ lex.yy.o\
 treeUtils.o\
 symbolTable.o\
 semantics.o\
-
+emitcode.o\
+codegen.o\
 
 LIBS = -lm 
 

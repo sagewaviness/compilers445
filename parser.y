@@ -9,6 +9,8 @@
 #include "scanType.h"
 #include "symbolTable.h"
 #include "semantics.h"
+#include "codegen.h"
+#include "emitcode.h"
 
 using namespace std;
 
@@ -471,8 +473,8 @@ int main(int argc, char **argv) {
       symtab->debug(false);
       
       syntaxTree = semanticAnalysis(syntaxTree, true, false, symtab, globalOffset);
-
-      printTree(stdout, syntaxTree, true, true);
+      codegen(stdout,strdup(argv[1]) ,syntaxTree, symtab, globalOffset, false);
+	//printTree(stdout, syntaxTree, true, true);
 
       if(dotAST) {
          printDotTree(stdout, syntaxTree, true, false);
@@ -483,7 +485,6 @@ int main(int argc, char **argv) {
       printf("Errors: %d\n", numErrors);
       printf("-----------\n");
    }
-   
    printf("Number of warnings: %d\n", numWarnings);
    printf("Number of errors: %d\n", numErrors);
    return 0;
