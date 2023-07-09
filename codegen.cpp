@@ -32,8 +32,6 @@ void initGlobalArraySizes();
 int toffset = 0;
 
 
-
-
 void codegen(FILE *codeIn, char *srcFile, TreeNode *syntaxTree, SymbolTable *globalsIn, int globalOffset, bool linenumFlagIn)
 {
    int initJump;
@@ -47,6 +45,17 @@ void codegen(FILE *codeIn, char *srcFile, TreeNode *syntaxTree, SymbolTable *glo
    codegenHeader(srcFile); //header comment 
    codegenGeneral(syntaxTree);  //general code generation including I/O library
    codegenInit(initJump, globalOffset); //initialization for run 
+}
+
+
+void commentLineNum(TreeNode *currnode)
+{
+    char buf[16];
+
+    if (linenumFlag) {
+        sprintf(buf, "%d", currnode->lineno);
+        emitComment((char *)"Line: ", buf);
+    }
 }
 
 // Generate init code ...
@@ -174,6 +183,7 @@ void codegenLibraryFun(TreeNode *currnode)
     emitGoto(0, AC, (char *)"Return");
     emitComment((char *)"END FUNCTION", currnode->attr.name);
 }
+
 void commentLineNum(TreeNode *currnode)
 {
     char buf[16];
@@ -242,6 +252,53 @@ void codegenDecl(TreeNode *currnode)
          break;
    }
 }
+
+void codegenStatement(TreeNode *currnode) 
+{
+// local state to remember stuff
+int skiploc=0, skiploc2=0, currloc=0;  // some temporary instuction addresses
+TreeNode *loopindex=NULL;              // a pointer to the index variable declaration node
+
+commentLineNum(currnode);
+
+switch (currnode->kind.stmt) {
+    case CompoundK:
+    {
+    int savedToffset;
+
+    savedToffset = toffset;            // zzz huh?
+    toffset = currnode->size;               // recover the end of activation record
+    emitComment((char *)"COMPOUND");
+    emitComment((char *)"TOFF set:", toffset);
+    codegenGeneral(currnode->child[0]);     // process inits
+    emitComment((char *)"Compound Body");
+    codegenGeneral(currnode->child[1]);     // process body
+    toffset = savedToffset;          // zzz huh?
+    emitComment((char *)"TOFF set:", toffset);
+    emitComment((char *)"END COMPOUND");
+    }
+    break;
+
+    case WhileK:
+    emitComment((char *)"WHILE");
+    currloc = emitSkip(0); // return to here to do the test
+    codegenExpression(currnode->child[0]); // test expression
+    emitRM((char *)"JNZ", AC, 1, PC, (char *)"Jump to while part");
+    emitComment((char *)"DO");
+    skiploc = breakloc; // save the old break statement return point
+    breakloc = emitSkip(1); // addr of instr that jumps to end of loop
+    // this is also the backpatch point
+    codegenGeneral(currnode->child[1]); // do body of loop
+    emitGotoAbs(currloc, (char *)"go to beginning of loop");
+    backPatchAJumpToHere(breakloc, (char *)"Jump past loop [backpatch]");
+    // backpatch jump to end of loop
+    breakloc = skiploc; // restore for break statement
+    emitComment((char *)"END WHILE");
+    break;
+}
+
+}
+
 
 void codegenExpression(TreeNode *currnode) {
     int off;
