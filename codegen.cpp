@@ -4,6 +4,8 @@
 #include "scanType.h"
 #include "parser.tab.h"
 
+using namespace std;
+
 extern int numErrors;
 extern int numWarnings;
 //extern void yyparse();
@@ -13,7 +15,7 @@ extern char **largerTokens;
 extern void initTokenStrings();
 
 FILE *code;
-static bool linenumFlag;
+static bool linenumFlag = false;
 static int breakloc;
 static SymbolTable *globals;
 
@@ -24,7 +26,7 @@ void codegenStatement(TreeNode *currnode);
 void codegenExpression(TreeNode *currnode);
 void codegenDecl(TreeNode *currnode);
 void initGlobalArraySizes();
-
+void commentLineNum(TreeNode *currnode);
 
 #define RETURNOFFSET -1
 #define OFPOFF 0
@@ -184,16 +186,6 @@ void codegenLibraryFun(TreeNode *currnode)
     emitComment((char *)"END FUNCTION", currnode->attr.name);
 }
 
-void commentLineNum(TreeNode *currnode)
-{
-    char buf[16];
-
-    if (linenumFlag) {
-        sprintf(buf, "%d", currnode->lineno);
-        emitComment((char *)"Line: ", buf);
-    }
-}
-
 void codegenFun(TreeNode *currnode)
 { 
     emitComment((char *)"");
@@ -306,16 +298,29 @@ void codegenExpression(TreeNode *currnode) {
     TreeNode *param;
     commentLineNum(currnode);
     switch(currnode->kind.exp) {
-    case OpK:
- 	if (currnode->child[1]) {
-	   emitRM((char *)"ST", AC, toffset, FP, (char *)"Push left side"); 
-	   toffset--; 
+      case OpK:
+
+/*       if (currnode->child[0] && currnode->child[1] && currnode->child[2])
+        {
+           emitRM((char *)"ADD", AC, toffset, FP, (char *)"Op +");
+        }
+       if (currnode->child[0]){
+           toffset--; 
+	   emitRM((char *)"LD", AC, currnode->child[0]->offset, FP, (char *)"Load variable",currnode->child[0]->attr.name);
+	   toffset++;
+       }*/
+//maybe delete above
+       if(currnode->child[1]) {
+	  emitRM((char *)"ST", AC, toffset, FP, (char *)"Push left side"); 
+	   toffset--;
+            
 	   emitComment((char *)"TOFF dec:", toffset); 
 	   codegenExpression(currnode->child[1]);
 	   toffset++; 
 	   emitComment((char *)"TOFF inc:", toffset); 	
  	   emitRM((char *)"LD", AC1, toffset, FP, (char *)"Pop left into ac1");
-	}
+ 	}
+	break;
     case AssignK:
             TreeNode *rhs, *lhs;
             lhs = currnode->child[0];
@@ -621,7 +626,7 @@ void initAGlobalSymbol(std::string sym, void *ptr)
 
         if (currnode->kind.decl==VarK &&
             (currnode->varKind == Global || currnode->varKind == LocalStatic)) {
-            if (currnode->child[0]) {
+             (currnode->child[0]) {
                 // compute rhs -> AC;
                 codegenExpression(currnode->child[0]);
 // save it
