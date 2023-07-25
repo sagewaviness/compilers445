@@ -4,6 +4,8 @@
 #include "scanType.h"
 #include "parser.tab.h"
 
+using namespace std;
+
 extern int numErrors;
 extern int numWarnings;
 //extern void yyparse();
@@ -13,7 +15,7 @@ extern char **largerTokens;
 extern void initTokenStrings();
 
 FILE *code;
-static bool linenumFlag;
+static bool linenumFlag = false;
 static int breakloc;
 static SymbolTable *globals;
 
@@ -24,8 +26,8 @@ void codegenStatement(TreeNode *currnode);
 void codegenExpression(TreeNode *currnode);
 void codegenDecl(TreeNode *currnode);
 void initGlobalArraySizes();
-
-
+void commentLineNum(TreeNode *currnode);
+void initAGlobalSymbol(std::string sym, void *ptr);
 #define RETURNOFFSET -1
 #define OFPOFF 0
 
@@ -90,7 +92,8 @@ void codegenHeader(char *srcFile)
 }
 
 void codegenGeneral(TreeNode *currnode)
-{ 
+{
+
    while (currnode) 
    {
      switch (currnode->nodekind) 
@@ -106,6 +109,7 @@ void codegenGeneral(TreeNode *currnode)
 	   codegenDecl(currnode); 
 	   break;
      }
+
      currnode = currnode->sibling;
    }
 }
@@ -117,7 +121,7 @@ void codegenLibraryFun(TreeNode *currnode)
     emitComment((char *)"FUNCTION", currnode->attr.name);
     // remember where this function is
     currnode->offset = emitSkip(0);
-    // Store return address
+    // Store retura address
     emitRM((char *)"ST", AC, RETURNOFFSET, FP, (char *)"Store return address");
     // Next slides here
 
@@ -184,16 +188,6 @@ void codegenLibraryFun(TreeNode *currnode)
     emitComment((char *)"END FUNCTION", currnode->attr.name);
 }
 
-void commentLineNum(TreeNode *currnode)
-{
-    char buf[16];
-
-    if (linenumFlag) {
-        sprintf(buf, "%d", currnode->lineno);
-        emitComment((char *)"Line: ", buf);
-    }
-}
-
 void codegenFun(TreeNode *currnode)
 { 
     emitComment((char *)"");
@@ -237,6 +231,63 @@ void codegenDecl(TreeNode *currnode)
    switch(currnode->kind.decl) 
    {
       case VarK:
+//
+//
+	if (currnode->isArray) {
+          switch (currnode->varKind) {
+            case Local:
+                emitRM((char *)"LDC", AC, currnode->size-1, 6, (char *)"load size of array", currnode->attr.name);
+                emitRM((char *)"ST", AC, currnode->offset+1, offsetRegister(currnode->varKind), (char *)"save size of array", currnode->attr.name);
+                break;
+            case LocalStatic:
+            case Parameter:
+            case Global:
+	     break;
+            case None:
+		printf("ERROR(SYSTEM): lhs->varKind is None for variable declaration\n");
+            }
+
+	    if (currnode->child[0]) {
+                codegenExpression(currnode->child[0]);
+                emitRM((char *)"LDA", AC1, currnode->offset, offsetRegister(currnode->varKind), (char *)"address of lhs");
+                emitRM((char *)"LD", AC2, 1, AC, (char *)"size of rhs");
+                emitRM((char *)"LD", AC3, 1, AC1, (char *)"size of lhs");
+                emitRO((char *)"SWP", AC2, AC3, 6, (char *)"pick smallest size");
+                emitRO((char *)"MOV", AC1, AC, AC2, (char *)"array op =");
+            }
+        }
+	else {
+	   if (currnode->child[0]) {
+                switch (currnode->varKind) {
+                case Local:
+		    codegenExpression(currnode->child[0]);
+		    emitRM((char *)"ST", AC, currnode->offset, FP,
+                           (char *)"Store variable", currnode->attr.name);
+                case LocalStatic:
+                case Parameter:
+                case Global:
+		    break;
+                case None:
+                    printf("ERROR(SYSTEM): lhs->varKind is None for variable declaration\n");
+                }
+            }
+        }
+        break;
+/*
+	if(currnode->isArray){
+	  emitRM((char *)"LDC", AC, currnode->size -1, 6,
+                 (char *)"load size of array", currnode->attr.name);
+          emitRM((char *)"ST", AC, -2 , 1, (char *)"save size of array", 
+                currnode->attr.name);
+  	  if(currnode->child[0]){
+	    codegenExpression(currnode->child[0]);
+	  }
+	   
+printf("end of is array vark\n");
+	}
+*/
+//
+//
          // You have a LOT to do here!!!!!
          break;
       case FuncK:
@@ -264,18 +315,19 @@ commentLineNum(currnode);
 switch (currnode->kind.stmt) {
     case CompoundK:
     {
-        int savedToffset;
+       int savedToffset;
 
-        savedToffset = toffset;            // zzz huh?
-        toffset = currnode->size;               // recover the end of activation record
-        emitComment((char *)"COMPOUND");
-        emitComment((char *)"TOFF set:", toffset);
-        codegenGeneral(currnode->child[0]);     // process inits
-        emitComment((char *)"Compound Body");
-        codegenGeneral(currnode->child[1]);     // process body
-        toffset = savedToffset;          // zzz huh?
-        emitComment((char *)"TOFF set:", toffset);
-        emitComment((char *)"END COMPOUND");
+       savedToffset = toffset;            // zzz huh?
+       toffset = currnode->size;               // recover the end of activation record
+       emitComment((char *)"COMPOUND");
+       emitComment((char *)"TOFF set:", toffset);
+       
+       codegenGeneral(currnode->child[0]);     // process inits
+       emitComment((char *)"Compound Body");
+       codegenGeneral(currnode->child[1]);     // process body
+       toffset = savedToffset;          // zzz huh?
+       emitComment((char *)"TOFF set:", toffset);
+       emitComment((char *)"END COMPOUND");
     }
     break;
 
@@ -305,25 +357,187 @@ void codegenExpression(TreeNode *currnode) {
     int callLoc;
     TreeNode *param;
     commentLineNum(currnode);
+
     switch(currnode->kind.exp) {
-    case OpK:
- 	if (currnode->child[1]) {
-	   emitRM((char *)"ST", AC, toffset, FP, (char *)"Push left side"); 
-	   toffset--; 
+      case CallK:
+	emitComment((char *)"CALL", currnode->attr.name);
+	off = toffset;	
+	emitRM((char *)"ST", FP, toffset, 1, (char *)"Store fp in ghost frame for", currnode->attr.name);
+	toffset--;
+	emitComment((char *)"TOFF dec:", toffset);			
+	toffset--;
+	emitComment((char *)"TOFF dec:", toffset);	
+	TreeNode *Node;
+	Node = (TreeNode *)(globals->lookup(currnode->attr.name));
+	callLoc  = Node->offset;
+	//int tempoff = toffset; 
+	param = currnode->child[0];
+	int i;
+        char buf[16];
+        i = 1;  
+
+	while(param)
+	{
+	   sprintf(buf, "%d" , i);
+	   emitComment((char *)"Param", buf);	
+	   codegenExpression(param);
+	   emitRM((char *)"ST", AC, toffset, 1, (char *)"Push parameter");
+	   toffset--; emitComment((char *)"TOFF dec:", toffset); //deal with parameters
+	   i++;
+	   param = param->sibling;
+	  
+	}
+	
+	emitComment((char *)"Param end", currnode->attr.name);
+	toffset = off;
+        emitRM((char *)"LDA", FP, toffset, 1, (char *)"Ghost frame becomes new active frame");
+
+////currnode->attr.value or currnode->attr.value-1 unsure
+	emitRM((char *)"LDA", AC, currnode->attr.value+1, 7, (char *)"Return address in ac");
+/////
+//
+//
+//
+	emitRMAbs((char *)"JMP", PC, callLoc, (char *)"CALL", currnode->attr.name);
+	//emitGotoAbs(callLoc, (char *)"CALL", currnode->attr.name);
+	//emitRM((char *)"JMP", 7, -5, 7, (char *)"CALL main");
+	emitRM((char *)"LDA", AC, currnode->attr.value, 2, (char *)"Save the result in ac");
+	      /*>	 42:    LDA  3,1(7)	Return address in ac 
+		  >	 43:    JMP  7,-5(7)	CALL main
+	      >	 44:    LDA  3,0(2)	Save the result in ac 
+		     >	* Call end main
+	      >	* TOFF set: -2 */
+	emitComment((char *)"Call end", currnode->attr.name);
+	emitComment((char *)"TOFF set:", toffset);
+	break;
+      case ConstantK: 
+           switch(currnode->type){
+		case Void:
+		   break;
+		case Integer:
+		    emitRM((char *)"LDC", AC, currnode->attr.value, 6, (char *)"Load integer constant");
+		   break; 
+		case  Boolean:
+		    emitRM((char *)"LDC", AC, currnode->attr.value, 6, (char *)"Load Boolean constant");
+		   break; 
+		case  Char:
+		 if (currnode->isArray) {
+                    emitStrLit(currnode->offset, currnode->attr.string);  // at this point offset<=0
+                    emitRM((char *)"LDA", AC, currnode->offset, 0, (char *)"Load address of char array");
+	         }
+                 else {
+                    emitRM((char *)"LDC", AC, int(currnode->attr.cvalue), 6, (char *)"Load char constant");
+                 }
+		   break;
+		case  UndefinedType:
+	           break; 
+		default:
+		   printf("ERROR(SYSTEM): unknown constant type %d\n", currnode->type); 
+		   break;
+           }
+	break;
+      case IdK:
+	off = offsetRegister(currnode->varKind);
+	if(!currnode->isArray){
+	 emitRM((char *)"LD", AC, currnode->offset, off, (char *)"Load variable", currnode->attr.name); 
+	}
+	else{
+	   if(currnode->varKind != Parameter)
+	   {
+              emitRM((char *)"LDA", AC, currnode->offset, off, (char *)"Load address of base of array", currnode->attr.name);
+	   }
+	   else{
+	      emitRM((char *)"LD", AC, currnode->offset, off, (char *)"Load address of base of array", currnode->attr.name);
+	   }
+	}
+        break;
+      case OpK:
+	codegenExpression(currnode->child[0]);
+       if(currnode->child[1]) {
+	  emitRM((char *)"ST", AC, toffset, FP, (char *)"Push left side"); 
+	   toffset--;
+            
 	   emitComment((char *)"TOFF dec:", toffset); 
 	   codegenExpression(currnode->child[1]);
 	   toffset++; 
 	   emitComment((char *)"TOFF inc:", toffset); 	
  	   emitRM((char *)"LD", AC1, toffset, FP, (char *)"Pop left into ac1");
-	}
+	 }
+	  switch(currnode->attr.op){
+	     case '[':
+	       emitRO((char *)"SUB", AC, AC1, AC, (char *)"compute location from index");
+               emitRM((char *)"LD", AC, 0, AC,(char *)"Load array element");
+	       break;
+	     case '+':
+	       emitRO((char *)"ADD", AC, AC1, AC, (char *)"Op +");
+	       break;
+	     case AND:
+		emitRO((char *)"AND", AC, AC1, AC, (char *)"Op AND"); 
+	       break;
+	     case OR:
+                emitRO((char *)"OR", AC, AC1, AC, (char *)"Op OR");
+               break;
+	     case LEQ:
+                emitRO((char *)"TLE", AC, AC1, AC, (char *)"Op <=");
+               break;
+	     case '<':
+                emitRO((char *)"TLT", AC, AC1, AC, (char *)"Op <");
+               break;
+	     case '>':
+                emitRO((char *)"TGT", AC, AC1, AC, (char *)"Op >");
+               break;
+	     case GEQ:
+                emitRO((char *)"TGE", AC, AC1, AC, (char *)"Op >=");
+               break;
+	     case EQ:
+                emitRO((char *)"TEQ", AC, AC1, AC, (char *)"Op ==");
+               break;
+	     case NEQ:
+                emitRO((char *)"TNE", AC, AC1, AC, (char *)"Op !=");
+               break;
+	     case '-':
+                emitRO((char *)"SUB", AC, AC1, AC, (char *)"Op -");
+               break;
+	     case '*':
+                emitRO((char *)"MUL", AC, AC1, AC, (char *)"Op *");
+               break;
+	     case '/':
+                emitRO((char *)"DIV", AC, AC1, AC, (char *)"Op /");
+               break;
+	     case '%':
+                emitRO((char *)"MOD", AC, AC1, AC, (char *)"Op %");
+               break;
+	     case MAX:
+                emitRO((char *)"SWP", AC1, AC, AC, (char *)"Op :>:");
+               break;
+	     case MIN:
+                emitRO((char *)"SWP", AC, AC1, AC, (char *)"Op :<:");
+               break;
+	     case '?':
+                emitRO((char *)"RND", AC, AC, 6, (char *)"Op ?");
+               break;
+	     case NOT:
+	        emitRM((char *)"LDC", AC1, 1, 6, (char *)"Load 1");	
+                emitRO((char *)"XOR", AC, AC, AC1, (char *)"Op XOR to get logical not");
+               break;
+	     case SIZEOF:
+
+	           emitRM((char *)"LD", AC, 1, AC, (char *)"Load array size");
+               break;
+	     case CHSIGN:
+		emitRO((char *)"NEG", AC, AC, AC, (char *)"Op unary -");
+	       break;
+             default: 
+	        printf("Error in opk");
+	 
+ 	}
+	break;
     case AssignK:
             TreeNode *rhs, *lhs;
             lhs = currnode->child[0];
             rhs = currnode->child[1];
             // handle indexing of arrays
-
             if (lhs->attr.op == '[') {  // fist if is array kinds
-
                 TreeNode *var, *index;
                 var = lhs->child[0];
                 index = lhs->child[1];
@@ -345,7 +559,7 @@ void codegenExpression(TreeNode *currnode) {
                     case LocalStatic:
                     case Global:
                         emitRM((char *)"LDA", AC2, var->offset, GP, (char *)"Load address of base of array", var->attr.name);
-                        break;
+		        break;
                     case None:
                         printf("ERROR(SYSTEM): var->varKind is None for indexed array\n");
                 }
@@ -464,21 +678,14 @@ void codegenExpression(TreeNode *currnode) {
     
 
                 offReg = offsetRegister(lhs->varKind);
-
+	        if (rhs) codegenExpression(rhs);
                 // compute rhs -> AC;   Note that ++ does not have rhs
-
-                if (rhs) codegenExpression(rhs);
-
-    
-
                 // save it
 
                 switch (currnode->attr.op) {
 
                 case '=':
-
                     if (lhs->isArray) {
-
                         if (lhs->varKind == Parameter) {
 
                             emitRM((char *)"LD", AC1, lhs->offset, offReg, (char *)"address of lhs");
@@ -610,21 +817,19 @@ void initAGlobalSymbol(std::string sym, void *ptr)
 {
     TreeNode *currnode;
 
-//    printf("Symbol: %s\n", sym.c_str());       // dump the symbol table
     currnode = (TreeNode *)ptr;
-//    printf("lineno: %d\n", currnode->lineno);       // dump the symbol table
     if (currnode->lineno != -1) {
         if (currnode->isArray) {
             emitRM((char *)"LDC", AC, currnode->size-1, 6, (char *)"load size of array", currnode->attr.name);
             emitRM((char *)"ST", AC, currnode->offset+1, GP, (char *)"save size of array", currnode->attr.name);
         }
-
         if (currnode->kind.decl==VarK &&
-            (currnode->varKind == Global || currnode->varKind == LocalStatic)) {
-            if (currnode->child[0]) {
+            (currnode->varKind == Global || currnode->varKind == LocalStatic)) {	
+           if (currnode->child[0]) {
+
                 // compute rhs -> AC;
                 codegenExpression(currnode->child[0]);
-// save it
+                // save it
                 emitRM((char *)"ST", AC, currnode->offset, GP,
                        (char *)"Store variable", currnode->attr.name);
             }

@@ -1,0 +1,13 @@
+#DRBC Returnk with no child[0] 
+#DRBC Func: main returns type void [mem: Global loc: 0 size: -2] [line: 7]
+#DRBC .   Child: 1  Compound [mem: None loc: 0 size: -2] [line: 7]
+#DRBC .   .   Child: 1  Return [line: 8]
+#DRBC * RETURN                                                     ReturnK:
+#DRBC  40:     LD  3,-1(1)    Load return address                  ReturnK:
+#DRBC  41:     LD  1,0(1)     Adjust fp                            ReturnK:
+#DRBC  42:    JMP  7,0(3)     Return                               ReturnK:
+
+main() {
+   return;
+}
+

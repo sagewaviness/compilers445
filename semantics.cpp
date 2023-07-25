@@ -130,21 +130,20 @@ void traverseDeclK(TreeNode *current, SymbolTable *symtab)
    	case FuncK: 
 	    //foffset =-2;
 	    if (!symtab->insertGlobal(id, (void*)current) && current->lineno != -1) {
-            //printf("SEMANTIC ERROR(%d): Symbol '%s' is already declared at line UNKNOWN.\n", current->lineno, id);
+               //printf("SEMANTIC ERROR(%d): Symbol '%s' is already declared at line UNKNOWN.\n", current->lineno, id);
              // exit(1);
              }
 	     current->varKind = Global;
-	     current->size = foffset;
-             
+	     current->size = foffset; 
 	   break;
 	case VarK:
 	//no break here
 	case ParamK:
-		if (!symtab->insert(id, (void*)current) && current->lineno != -1) 
-      {
-            //printf("SEMANTIC ERROR(%d): Symbol '%s' is already declared at line UNKNOWN.\n", current->lineno, id);
+ 	    if (!symtab->insert(id, (void*)current) && current->lineno != -1) 
+      	    {
+               //printf("SEMANTIC ERROR(%d): Symbol '%s' is already declared at line UNKNOWN.\n", current->lineno, id);
             //           // exit(1);
-      }
+            }
             if (symtab->depth() == 1)
             {
                current->varKind = Global;
@@ -160,6 +159,8 @@ void traverseDeclK(TreeNode *current, SymbolTable *symtab)
                   char *newName;
                   newName = new char[strlen(id)+10];
                   sprintf(newName, "%s-%d" , id , ++varCounter);
+  	          symtab->insertGlobal(newName, current);
+
                   delete [] newName;
                }
 		      }
@@ -197,6 +198,12 @@ void traverseStmtK(TreeNode *current, SymbolTable *symtab)
    switch (current->kind.stmt) 
     {
         case IfK:
+	    if(current->child[0]->type != Boolean)
+	    {
+	       printf("SEMANTIC ERROR(%d): Expecting Boolean test condition in if statement but got %s.\n", 
+		       current->lineno, expTypeToStr(current->child[0]->type));
+	       numErrors++;
+	    }
             break;
         case WhileK:
             break;
@@ -208,6 +215,12 @@ void traverseStmtK(TreeNode *current, SymbolTable *symtab)
         case RangeK:
             break;
         case ReturnK:
+	
+	     if (current != NULL && current->child[0] != NULL && current->child[0]->isArray)
+	     {
+	       printf("SEMANTIC ERROR(%d): Cannot return an array.\n", current->lineno);
+	       numErrors++;
+	     }
             break;
         case BreakK:
             break;
@@ -227,8 +240,18 @@ void traverseStmtK(TreeNode *current, SymbolTable *symtab)
 void traverseExpK(TreeNode *current, SymbolTable *symtab)
 { 
    switch (current->kind.exp) 	
-   { 
+   {
       case AssignK:
+	  if(current->child[0] && current->child[1] && current->child[1]->type != UndefinedType)
+          {
+	      if (current->child[0]->type != current->child[1]->type)
+	    {
+		//SEMANTIC ERROR(12): '=' requires operands of the same type but lhs is type int and rhs is type char.
+	       printf("SEMANTIC ERROR(%d): '=' requires operands of the same type but lhs is %s and rhs is %s.\n",
+			 current->lineno, expTypeToStr(current->child[0]->type), expTypeToStr(current->child[1]->type));
+ 	       numErrors++;
+	    }
+	  }
       case OpK: 
          switch (returnType[current->attr.op]) 
          {
@@ -276,15 +299,16 @@ void traverseExpK(TreeNode *current, SymbolTable *symtab)
       case IdK:
       case CallK:
          { 
-      
             char *id = strdup(current->attr.name);
             TreeNode *temp = (TreeNode*)symtab->lookup(id);
                         
-            //traverse tree here somehow
-            if(temp==NULL)
-            { 
-            // do something here 
+            if(temp == NULL)
+            {
+		printf("SEMANTIC ERROR(%d): Symbol '%s' is not declared.\n", current->lineno, id); 
+		numErrors++;
+		break;	
             }
+
             current->type = temp->type;
             current->isArray = temp->isArray;
             current->isStatic = temp->isStatic;
