@@ -357,7 +357,7 @@ void codegenExpression(TreeNode *currnode) {
     int callLoc;
     TreeNode *param;
     commentLineNum(currnode);
-
+    
     switch(currnode->kind.exp) {
       case CallK:
 	emitComment((char *)"CALL", currnode->attr.name);
@@ -675,7 +675,6 @@ void codegenExpression(TreeNode *currnode) {
 
                 int offReg;
 
-    
 
                 offReg = offsetRegister(lhs->varKind);
 	        if (rhs) codegenExpression(rhs);
