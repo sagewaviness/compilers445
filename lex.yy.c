@@ -580,7 +580,7 @@ int setValue(int linenum, int tokenClass, char *svalue)
 	{
          yylval.tokenData->svalue[i] = yylval.tokenData->svalue[i+1];
 	}
-
+        yylval.tokenData->svalue[strlen(svalue)-2] = '\0';
         break;
       case CHARCONST:
 	yylval.tokenData->cvalue = svalue[1];

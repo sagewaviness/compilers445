@@ -11,6 +11,7 @@
 #include "semantics.h"
 #include "codegen.h"
 #include "emitcode.h"
+#include "yyerror.h"
 
 using namespace std;
 
@@ -19,7 +20,7 @@ extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
 
-void yyerror(const char *msg);
+//void yyerror(const char *msg);
 
 void printToken(TokenData myData, string tokenName, int type = 0) 
 {
@@ -224,7 +225,7 @@ stmtList : stmtList stmt                  {$$ = ($2 ==NULL? $1: addSibling($1, $
             ;
 
 returnstmt : RETURN ';'          {$$ = newStmtNode(ReturnK, $1);}
-           | RETURN exp ';'      {$$ = newStmtNode(ReturnK, $1, $2);}
+           | RETURN exp ';'      {$$ = newStmtNode(ReturnK, $1, $2);yyerrok;}
            ;
 
 breakstmt : BREAK ';'            {$$ = newStmtNode(BreakK, $1);}
@@ -357,10 +358,11 @@ constant : NUMCONST     { $$ = newExpNode(ConstantK, $1);
          ;
 
 %%
-void yyerror (const char *msg)
+
+/*void yyerror (const char *msg)
 { 
    cout << "Error: " <<  msg << endl;
-}
+}*/
 
 char *largerTokens[LASTTERM+1];
 void initTokenStrings() 
@@ -432,7 +434,7 @@ char *tokenToStr(int type)
 int main(int argc, char **argv) {
    //yylval.tokenData->linenum = 1;
    initTokenStrings(); 
-  yylval.tokenData = (TokenData*)malloc(sizeof(TokenData));
+   yylval.tokenData = (TokenData*)malloc(sizeof(TokenData));
    yylval.tree = (TreeNode*)malloc(sizeof(TreeNode));
      
    numErrors = 0; 
@@ -456,6 +458,11 @@ int main(int argc, char **argv) {
                ;
       }
    }
+  //
+  //
+  //unsure if below call is in correct spot
+  initErrorProcessing();
+
    if ( optind == argc ) yyparse();
    for (index = optind; index < argc; index++)
    {
@@ -471,20 +478,21 @@ int main(int argc, char **argv) {
       SymbolTable *symtab;
       symtab = new SymbolTable();
       symtab->debug(false);
-      
       syntaxTree = semanticAnalysis(syntaxTree, true, false, symtab, globalOffset);
-      codegen(stdout,strdup(argv[1]) ,syntaxTree, symtab, globalOffset, false);
-	//printTree(stdout, syntaxTree, true, true);
+      if(numErrors == 0){
+         codegen(stdout,strdup(argv[1]) ,syntaxTree, symtab, globalOffset, false);
+      }
+     //printTree(stdout, syntaxTree, true, true);
 
       if(dotAST) {
          printDotTree(stdout, syntaxTree, true, false);
       }
    }
-   else {
+   /*else {
       printf("-----------\n");
       printf("Errors: %d\n", numErrors);
       printf("-----------\n");
-   }
+   }*/
    printf("Number of warnings: %d\n", numWarnings);
    printf("Number of errors: %d\n", numErrors);
    return 0;
